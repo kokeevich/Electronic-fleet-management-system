@@ -7,6 +7,12 @@ namespace FleetManagement.Tests;
 
 public class MainViewModelTests
 {
+    private static MainViewModel CreateViewModel(IFleetService service)
+    {
+        var session = new UserSession();
+        session.SignIn(new SessionUser(1, "Пользователь", "Диспетчер"));
+        return new MainViewModel(service, session, new AccessService(session));
+    }
     private sealed class StubService : IFleetService
     {
         public Func<Task<List<Vehicle>>> Load { get; set; } = () =>
@@ -21,7 +27,7 @@ public class MainViewModelTests
         {
             Load = () => Task.FromResult(new List<Vehicle> { new() { VehicleId = 7 } })
         };
-        var vm = new MainViewModel(service);
+        var vm = CreateViewModel(service);
         await vm.LoadAsync();
         await vm.LoadAsync();
         Assert.Equal(7, Assert.Single(vm.Vehicles).VehicleId);
@@ -33,7 +39,7 @@ public class MainViewModelTests
     public async Task FailureClearsStaleRowsHidesDetailsAndAllowsRetry()
     {
         var service = new StubService();
-        var vm = new MainViewModel(service);
+        var vm = CreateViewModel(service);
         vm.Vehicles.Add(new Vehicle());
         service.Load = () => throw new Exception("Password=do-not-display");
         await vm.LoadAsync();
@@ -51,7 +57,7 @@ public class MainViewModelTests
     {
         var pending = new TaskCompletionSource<List<Vehicle>>();
         var calls = 0;
-        var vm = new MainViewModel(new StubService
+        var vm = CreateViewModel(new StubService
         {
             Load = () => { calls++; return pending.Task; }
         });

@@ -9,11 +9,18 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <StackPanel Margin="0,0,0,24">
+        <DockPanel Margin="0,0,0,24">
+          <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" MaxWidth="280">
+            <TextBlock Text="{Binding UserName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding RoleName}" Foreground="#64748B" Margin="0,4"/>
+            <Button Content="Выйти" Click="Logout_Click" HorizontalAlignment="Right"/>
+          </StackPanel>
+          <StackPanel>
             <TextBlock Text="АВТОПАРК" Foreground="#235CE6" FontWeight="Bold"/>
             <TextBlock Text="Управление транспортом" FontSize="30" FontWeight="SemiBold" Margin="0,6,0,4"/>
             <TextBlock Text="Транспорт организации и состояние подключения" Foreground="#64748B"/>
-        </StackPanel>
+          </StackPanel>
+        </DockPanel>
         <TabControl Grid.Row="1" Background="White" BorderBrush="#DFE6F0" Padding="20">
             <TabItem Header="Транспорт">
                 <Grid Margin="12">
@@ -25,19 +32,81 @@
                         <Button DockPanel.Dock="Right" Content="Обновить" Command="{Binding RefreshCommand}"/>
                         <TextBlock Text="Транспортные средства" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </DockPanel>
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Vehicles}" AutomationProperties.Name="Транспортные средства">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Госномер" Binding="{Binding LicensePlate}" Width="120"/>
-                            <DataGridTextColumn Header="Марка" Binding="{Binding Brand}" Width="*"/>
-                            <DataGridTextColumn Header="Модель" Binding="{Binding Model}" Width="*"/>
-                            <DataGridTextColumn Header="Год" Binding="{Binding YearOfManufacture}" Width="70"/>
-                            <DataGridTextColumn Header="Пробег, км" Binding="{Binding Mileage, StringFormat=N0}" Width="110"/>
-                            <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="170"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <ListView Grid.Row="1" ItemsSource="{Binding Vehicles}" BorderThickness="0"
+                              Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                              AutomationProperties.Name="Транспортные средства">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,10"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListViewItem">
+                                            <Border x:Name="Card" Background="#F8FAFD" CornerRadius="12"
+                                                    BorderBrush="#E2E8F0" BorderThickness="1" Padding="18">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Card" Property="Background" Value="#EFF5FF"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Card" Property="BorderBrush" Value="#235CE6"/>
+                                                    <Setter TargetName="Card" Property="Background" Value="#EAF1FF"/>
+                                                </Trigger>
+                                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                    <Setter TargetName="Card" Property="BorderBrush" Value="#235CE6"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="160"/>
+                                        <ColumnDefinition Width="170"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                            <Run Text="{Binding Brand}"/><Run Text=" "/><Run Text="{Binding Model}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding LicensePlate}" Foreground="#52647E" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Mileage, StringFormat={}{0:N0} км}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding YearOfManufacture, StringFormat={}Год выпуска: {0}}"
+                                                   Foreground="#64748B" FontSize="12" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                    <Border Grid.Column="2" CornerRadius="8" Padding="10,7" VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#EDF0F5"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="В эксплуатации">
+                                                        <Setter Property="Background" Value="#DCF4E7"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="В ремонте">
+                                                        <Setter Property="Background" Value="#FFF0CB"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold"/>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
                 </Grid>
             </TabItem>
-            <TabItem Header="Подключение">
+            <TabItem Header="Подключение" Visibility="{Binding CanManageSettings, Converter={StaticResource BoolVisibility}}">
                 <StackPanel Margin="20" MaxWidth="650" HorizontalAlignment="Left">
                     <TextBlock Text="Подключение к базе данных" FontSize="22" FontWeight="SemiBold"/>
                     <TextBlock Margin="0,16" TextWrapping="Wrap" Text="Укажите строку подключения в переменной FLEET_CONNECTION_STRING или в файле %LOCALAPPDATA%\FleetManagement\connection.txt и нажмите «Обновить». Подробная инструкция находится в README проекта."/>

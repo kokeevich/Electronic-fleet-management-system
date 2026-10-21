@@ -1,38 +1,56 @@
-﻿using System.Configuration;
-using System.Data;
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using Курсовой_проект.Services;
+using Курсовой_проект.ViewModels;
 
-namespace Курсовой_проект
+namespace Курсовой_проект;
+
+public partial class App : Application
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
-    public partial class App : Application
+    private ServiceProvider? services;
+    protected override void OnStartup(StartupEventArgs e)
     {
-        private Microsoft.Extensions.DependencyInjection.ServiceProvider? services;
-
-        protected override void OnStartup(StartupEventArgs e)
-        {
-            base.OnStartup(e);
-            var collection = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
-            Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions
-                .AddSingleton<Services.IFleetService, Services.FleetService>(collection);
-            Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions
-                .AddTransient<ViewModels.MainViewModel>(collection);
-            Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions
-                .AddTransient<MainWindow>(collection);
-            services = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions
-                .BuildServiceProvider(collection);
-            MainWindow = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
-                .GetRequiredService<MainWindow>(services);
-            MainWindow.Show();
-        }
-
-        protected override void OnExit(ExitEventArgs e)
-        {
-            services?.Dispose();
-            base.OnExit(e);
-        }
+        base.OnStartup(e);
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
+        var collection = new ServiceCollection();
+        collection.AddSingleton<UserSession>();
+        collection.AddSingleton<AccessService>();
+        collection.AddSingleton<IUserStore, UserStore>();
+        collection.AddSingleton<IAuthenticationService, AuthenticationService>();
+        collection.AddSingleton<IFleetService, FleetService>();
+        collection.AddTransient<LoginViewModel>();
+        collection.AddTransient<MainViewModel>();
+        collection.AddTransient<LoginWindow>();
+        collection.AddTransient<MainWindow>();
+        services = collection.BuildServiceProvider();
+        ShowLogin();
     }
 
+    private void ShowLogin()
+    {
+        var provider = services ?? throw new InvalidOperationException("Сервисы приложения не настроены.");
+        var login = provider.GetRequiredService<LoginWindow>();
+        login.Authenticated += (_, _) =>
+        {
+            var window = provider.GetRequiredService<MainWindow>();
+            window.LogoutRequested += (_, _) =>
+            {
+                provider.GetRequiredService<UserSession>().SignOut();
+                ShowLogin();
+                window.Close();
+            };
+            MainWindow = window;
+            window.Show();
+            login.Close();
+        };
+        MainWindow = login;
+        login.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        services?.GetRequiredService<UserSession>().SignOut();
+        services?.Dispose();
+        base.OnExit(e);
+    }
 }

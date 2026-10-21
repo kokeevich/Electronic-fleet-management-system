@@ -13,13 +13,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private bool isBusy;
     private string status = "Подключение ещё не проверено.";
 
-    public MainViewModel(IFleetService fleet)
+    public MainViewModel(IFleetService fleet, UserSession session, AccessService access)
     {
         this.fleet = fleet;
+        UserName = session.Current?.FullName ?? "";
+        RoleName = session.Current?.Role ?? "";
+        CanManageSettings = access.Can(Permission.ManageSettings);
         RefreshCommand = new AsyncCommand(LoadAsync);
     }
 
     public ObservableCollection<Vehicle> Vehicles { get; } = new();
+    public string UserName { get; }
+    public string RoleName { get; }
+    public bool CanManageSettings { get; }
     public ICommand RefreshCommand { get; }
     public bool IsBusy
     {
@@ -45,6 +51,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Status = vehicles.Count == 0
                 ? "Подключение установлено. В базе пока нет транспортных средств."
                 : $"Подключение установлено. Загружено транспортных средств: {vehicles.Count}.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Status = "Доступ закрыт. Войдите в систему с подходящей ролью.";
         }
         catch (Exception)
         {

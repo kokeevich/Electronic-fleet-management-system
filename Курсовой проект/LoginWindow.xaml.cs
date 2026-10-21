@@ -1,35 +1,33 @@
-﻿using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Курсовой_проект.ViewModels;
 
-namespace Курсовой_проект
+namespace Курсовой_проект;
+
+public partial class LoginWindow : Window
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class LoginWindow : Window
+    private readonly LoginViewModel viewModel;
+    private bool closed;
+    public event EventHandler? Authenticated;
+
+    public LoginWindow(LoginViewModel viewModel)
     {
-        public LoginWindow()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+        this.viewModel = viewModel;
+        DataContext = viewModel;
+        Loaded += (_, _) => LoginTextBox.Focus();
+        Closed += (_, _) => { closed = true; PasswordBox.Clear(); };
+    }
 
-        private void LoginButton_Click(object sender, RoutedEventArgs e)
-        {
-            ErrorTextBlock.Text = "Авторизация будет подключена на втором этапе проекта.";
-        }
-
-        private void PasswordBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-                LoginButton_Click(sender, e);
-        }
+    private async void LoginButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Пароль не хранится во ViewModel и не записывается в настройки.
+        if (viewModel.IsBusy) return;
+        var password = PasswordBox.Password;
+        PasswordBox.Clear();
+        var success = await viewModel.SignInAsync(password);
+        password = "";
+        if (closed) return;
+        if (success) Authenticated?.Invoke(this, EventArgs.Empty);
+        else PasswordBox.Focus();
     }
 }

@@ -14,6 +14,7 @@
   </ItemGroup>
   <!-- Проверяем тот же исходный код без зависимости от WindowsDesktop runtime. -->
   <ItemGroup>
+    <Compile Include="../../tools/PasswordMigration/MigrationPlan.cs" Link="MigrationPlan.cs"/>
     <Compile Include="../../Курсовой проект/Models/*.cs" Link="Models/%(Filename)%(Extension)"/>
     <Compile Include="../../Курсовой проект/Services/*.cs" Link="Services/%(Filename)%(Extension)"/>
     <Compile Include="../../Курсовой проект/Configuration/*.cs" Link="Configuration/%(Filename)%(Extension)"/>
