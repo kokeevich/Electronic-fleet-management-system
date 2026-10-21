@@ -8,6 +8,7 @@ public partial class LoginWindow : Window
     private readonly LoginViewModel viewModel;
     private bool closed;
     public event EventHandler? Authenticated;
+    public event EventHandler? RegistrationRequested;
 
     public LoginWindow(LoginViewModel viewModel)
     {
@@ -29,5 +30,19 @@ public partial class LoginWindow : Window
         if (closed) return;
         if (success) Authenticated?.Invoke(this, EventArgs.Empty);
         else PasswordBox.Focus();
+    }
+
+    private void RegisterButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (viewModel.IsBusy) return;
+        PasswordBox.Clear();
+        RegistrationRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void CompleteRegistration(string login)
+    {
+        viewModel.SetRegisteredLogin(login);
+        PasswordBox.Clear();
+        PasswordBox.Focus();
     }
 }

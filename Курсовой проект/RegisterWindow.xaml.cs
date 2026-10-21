@@ -1,38 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using Курсовой_проект.ViewModels;
 
-namespace Курсовой_проект
+namespace Курсовой_проект;
+
+public partial class RegisterWindow : Window
 {
-    /// <summary>
-    /// Логика взаимодействия для RegisterWindow.xaml
-    /// </summary>
-    public partial class RegisterWindow : Window
+    private readonly RegisterViewModel viewModel;
+    public string RegisteredLogin => viewModel.Login;
+
+    public RegisterWindow(RegisterViewModel viewModel)
     {
-        public RegisterWindow()
+        InitializeComponent();
+        this.viewModel = viewModel;
+        DataContext = viewModel;
+        Loaded += (_, _) => LastNameTextBox.Focus();
+        // Не закрываем окно в момент сохранения: результат операции должен быть виден.
+        Closing += (_, e) => e.Cancel = viewModel.IsBusy;
+        Closed += (_, _) => { PasswordBox.Clear(); ConfirmationBox.Clear(); };
+    }
+
+    private async void RegisterButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (viewModel.IsBusy) return;
+        if (await viewModel.RegisterAsync(PasswordBox.Password, ConfirmationBox.Password))
         {
-            InitializeComponent();
-        }
-
-        private void LoginButton_Click(object sender, RoutedEventArgs e) =>
-            ErrorTextBlock.Text = "Авторизация будет подключена на втором этапе проекта.";
-
-        private void RegisterButton_Click(object sender, RoutedEventArgs e) =>
-            ErrorTextBlock.Text = "Управление пользователями будет доступно администратору.";
-
-        private void PasswordBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter) LoginButton_Click(sender, e);
+            PasswordBox.Clear();
+            ConfirmationBox.Clear();
+            DialogResult = true;
         }
     }
 }

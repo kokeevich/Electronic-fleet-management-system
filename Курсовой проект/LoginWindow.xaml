@@ -22,6 +22,7 @@
             </Grid>
         </Border>
         <Border Grid.Column="1" Background="White" CornerRadius="0,20,20,0" Padding="32">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Добро пожаловать" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Войдите в свою учётную запись" Foreground="#64748B" Margin="0,8,0,28"/>
@@ -33,12 +34,17 @@
                              IsEnabled="{Binding CanSubmit}"/>
                 <TextBlock Text="{Binding Error}" Foreground="#B42318" TextWrapping="Wrap" Margin="0,14,0,4"
                            AutomationProperties.LiveSetting="Assertive"/>
+                <TextBlock Text="{Binding Notice}" Foreground="#167348" TextWrapping="Wrap"
+                           AutomationProperties.LiveSetting="Polite"/>
                 <Button Content="Войти" IsDefault="True" Click="LoginButton_Click"
                         IsEnabled="{Binding CanSubmit}" Margin="0,12,0,0"/>
+                <Button Content="Создать учётную запись" Click="RegisterButton_Click"
+                        IsEnabled="{Binding CanSubmit}" Background="#EDF2FA" Foreground="#235CE6" Margin="0,8,0,0"/>
                 <ProgressBar Height="3" Margin="0,10,0,0" IsIndeterminate="{Binding IsBusy}"/>
                 <TextBlock Text="Не получается войти? Обратитесь к администратору."
                            TextWrapping="Wrap" Foreground="#64748B" FontSize="12" Margin="0,22,0,0"/>
             </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </Window>

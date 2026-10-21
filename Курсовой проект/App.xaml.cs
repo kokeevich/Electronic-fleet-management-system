@@ -17,8 +17,12 @@ public partial class App : Application
         collection.AddSingleton<AccessService>();
         collection.AddSingleton<IUserStore, UserStore>();
         collection.AddSingleton<IAuthenticationService, AuthenticationService>();
+        collection.AddSingleton<IRegistrationStore, RegistrationStore>();
+        collection.AddSingleton<IRegistrationService, RegistrationService>();
         collection.AddSingleton<IFleetService, FleetService>();
         collection.AddTransient<LoginViewModel>();
+        collection.AddTransient<RegisterViewModel>();
+        collection.AddTransient<RegisterWindow>();
         collection.AddTransient<MainViewModel>();
         collection.AddTransient<LoginWindow>();
         collection.AddTransient<MainWindow>();
@@ -30,6 +34,13 @@ public partial class App : Application
     {
         var provider = services ?? throw new InvalidOperationException("Сервисы приложения не настроены.");
         var login = provider.GetRequiredService<LoginWindow>();
+        login.RegistrationRequested += (_, _) =>
+        {
+            var registration = provider.GetRequiredService<RegisterWindow>();
+            registration.Owner = login;
+            if (registration.ShowDialog() == true)
+                login.CompleteRegistration(registration.RegisteredLogin);
+        };
         login.Authenticated += (_, _) =>
         {
             var window = provider.GetRequiredService<MainWindow>();

@@ -9,6 +9,8 @@ public sealed class LoginViewModel(IAuthenticationService authentication) : INot
     private string login = "";
     private string error = "";
     private bool busy;
+    private string notice = "";
+    public string Notice { get => notice; private set { notice = value; Changed(); } }
     public string Login { get => login; set { login = value; Changed(); } }
     public string Error { get => error; private set { error = value; Changed(); } }
     public bool IsBusy
@@ -18,10 +20,18 @@ public sealed class LoginViewModel(IAuthenticationService authentication) : INot
     }
     public bool CanSubmit => !IsBusy;
 
+    public void SetRegisteredLogin(string registeredLogin)
+    {
+        Login = registeredLogin;
+        Error = "";
+        Notice = "Учётная запись создана. Введите пароль, чтобы войти.";
+    }
+
     public async Task<bool> SignInAsync(string password)
     {
         if (IsBusy) return false;
         Error = "";
+        Notice = "";
         if (string.IsNullOrWhiteSpace(Login) || string.IsNullOrEmpty(password))
         {
             Error = "Введите логин и пароль.";
