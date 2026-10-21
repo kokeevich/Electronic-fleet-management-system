@@ -4,12 +4,12 @@
     <Style TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Background" Value="#F3F6FB"/>
-        <Setter Property="Foreground" Value="#182A42"/>
+        <Setter Property="Background" Value="#F2F7F6"/>
+        <Setter Property="Foreground" Value="#173B38"/>
     </Style>
     <Style TargetType="Button">
         <Setter Property="Padding" Value="18,10"/>
-        <Setter Property="Background" Value="#235CE6"/>
+        <Setter Property="Background" Value="#0F766E"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Cursor" Value="Hand"/>

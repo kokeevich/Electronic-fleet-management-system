@@ -1,0 +1,46 @@
+<Window x:Class="Курсовой_проект.VehicleEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding Title}" Width="580" Height="760" MinWidth="500" MinHeight="580"
+        WindowStartupLocation="CenterOwner">
+    <Border Margin="24" Padding="24" Background="White" CornerRadius="16">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="{Binding Title}" FontSize="25" FontWeight="SemiBold" Margin="0,0,0,18" TextWrapping="Wrap"/>
+                <StackPanel IsEnabled="{Binding CanEdit}">
+                    <Label Content="_Госномер *" Target="{Binding ElementName=Plate}" Padding="0,0,0,4"/>
+                    <TextBox x:Name="Plate" Text="{Binding LicensePlate, UpdateSourceTrigger=PropertyChanged}" MaxLength="20" Padding="8"/>
+                    <Label Content="_Марка *" Target="{Binding ElementName=Brand}" Padding="0" Margin="0,12,0,4"/>
+                    <TextBox x:Name="Brand" Text="{Binding Brand, UpdateSourceTrigger=PropertyChanged}" MaxLength="100" Padding="8"/>
+                    <Label Content="М_одель *" Target="{Binding ElementName=Model}" Padding="0" Margin="0,12,0,4"/>
+                    <TextBox x:Name="Model" Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}" MaxLength="100" Padding="8"/>
+                    <Label Content="Год _выпуска *" Target="{Binding ElementName=Year}" Padding="0" Margin="0,12,0,4"/>
+                    <TextBox x:Name="Year" Text="{Binding Year, UpdateSourceTrigger=PropertyChanged}" MaxLength="4" Padding="8"/>
+                    <Label Content="_Пробег, км *" Target="{Binding ElementName=Mileage}" Padding="0" Margin="0,12,0,4"/>
+                    <TextBox x:Name="Mileage" Text="{Binding Mileage, UpdateSourceTrigger=PropertyChanged}" MaxLength="10" Padding="8"/>
+                    <Label Content="_Статус *" Target="{Binding ElementName=StatusBox}" Padding="0" Margin="0,12,0,4"/>
+                    <ComboBox x:Name="StatusBox" ItemsSource="{Binding Statuses}" Text="{Binding Status, UpdateSourceTrigger=PropertyChanged}"
+                              IsEditable="True" Padding="8"/>
+                    <Label Content="VI_N (необязательно)" Target="{Binding ElementName=Vin}" Padding="0" Margin="0,12,0,4"/>
+                    <TextBox x:Name="Vin" Text="{Binding VinNumber, UpdateSourceTrigger=PropertyChanged}" MaxLength="50" Padding="8"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Message}" Foreground="#B42318" TextWrapping="Wrap" Margin="0,16,0,8"
+                           AutomationProperties.LiveSetting="Assertive"/>
+                <Button Content="Сохранить" Click="Save_Click" IsDefault="True" IsEnabled="{Binding CanEdit}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsReadOnly}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="Закрыть" IsCancel="True" IsEnabled="{Binding CanClose}"
+                        Background="#E3F3EF" Foreground="#0F766E"/>
+                <ProgressBar Height="3" IsIndeterminate="{Binding IsBusy}" Margin="0,8,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</Window>

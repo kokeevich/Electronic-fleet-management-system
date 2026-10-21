@@ -32,7 +32,7 @@ public class AccessTests
     {
         var session = new UserSession();
         var access = new AccessService(session);
-        var service = new FleetService(access, session);
+        var service = new FleetService(access, session, new VehicleStore());
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.GetVehiclesAsync());
         session.SignIn(new SessionUser(1, "Тест", "Диспетчер"));
         session.SignOut();

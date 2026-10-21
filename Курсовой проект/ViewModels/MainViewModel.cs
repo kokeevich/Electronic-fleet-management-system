@@ -12,6 +12,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly IFleetService fleet;
     private bool isBusy;
     private string status = "Подключение ещё не проверено.";
+    private List<Vehicle> allVehicles = new();
+    private string searchText = "", selectedStatus = "Все статусы";
+    private Vehicle? selectedVehicle;
 
     public MainViewModel(IFleetService fleet, UserSession session, AccessService access)
     {
@@ -19,10 +22,82 @@ public sealed class MainViewModel : INotifyPropertyChanged
         UserName = session.Current?.FullName ?? "";
         RoleName = session.Current?.Role ?? "";
         CanManageSettings = access.Can(Permission.ManageSettings);
+        CanManageVehicles = access.Can(Permission.ManageVehicles);
         RefreshCommand = new AsyncCommand(LoadAsync);
     }
 
     public ObservableCollection<Vehicle> Vehicles { get; } = new();
+    public ObservableCollection<string> Statuses { get; } = new() { "Все статусы", "В эксплуатации", "В ремонте", "Не используется" };
+    public string SearchText
+    {
+        get => searchText;
+        set { searchText = value; OnPropertyChanged(); ApplyFilter(); }
+    }
+    public string SelectedStatus
+    {
+        get => selectedStatus;
+        set { selectedStatus = value ?? "Все статусы"; OnPropertyChanged(); ApplyFilter(); }
+    }
+    public Vehicle? SelectedVehicle
+    {
+        get => selectedVehicle;
+        set { selectedVehicle = value; OnPropertyChanged(); SelectionChanged(); }
+    }
+    public bool CanManageVehicles { get; }
+    public bool IsIdle => !IsBusy;
+    public bool CanAdd => CanManageVehicles && IsIdle;
+    public bool CanOpenCard => SelectedVehicle != null && IsIdle;
+    public bool CanEditSelection => CanOpenCard && CanManageVehicles;
+    public string ResultSummary => $"Показано: {Vehicles.Count} из {allVehicles.Count}";
+
+    private void SelectionChanged()
+    {
+        OnPropertyChanged(nameof(CanAdd));
+        OnPropertyChanged(nameof(CanOpenCard));
+        OnPropertyChanged(nameof(CanEditSelection));
+    }
+
+    private void ApplyFilter()
+    {
+        var query = SearchText.Trim();
+        Vehicles.Clear();
+        SelectedVehicle = null;
+        foreach (var vehicle in allVehicles.Where(v =>
+            (SelectedStatus == "Все статусы" || v.Status == SelectedStatus) &&
+            (query.Length == 0 || v.LicensePlate.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+             v.Brand.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+             v.Model.Contains(query, StringComparison.CurrentCultureIgnoreCase))))
+            Vehicles.Add(vehicle);
+        OnPropertyChanged(nameof(ResultSummary));
+    }
+
+    public VehicleEditorViewModel? CreateEditor(bool createNew)
+    {
+        if (createNew && !CanAdd || !createNew && !CanOpenCard) return null;
+        return new VehicleEditorViewModel(fleet,
+            createNew ? null : VehicleData.From(SelectedVehicle!), !CanManageVehicles);
+    }
+
+    public async Task DeleteSelectedAsync()
+    {
+        if (!CanEditSelection) return;
+        var original = VehicleData.From(SelectedVehicle!);
+        IsBusy = true;
+        VehicleResult? result = null;
+        try
+        {
+            result = await fleet.DeleteAsync(original);
+            Status = result.Message;
+        }
+        catch (UnauthorizedAccessException) { Status = "Недостаточно прав для удаления транспорта."; }
+        catch (Exception) { Status = "Не удалось подтвердить удаление. Проверьте подключение и обновите список перед повтором."; }
+        finally { IsBusy = false; }
+        if (result?.Success == true)
+        {
+            await LoadAsync();
+            Status = result.Message + " " + Status;
+        }
+    }
     public string UserName { get; }
     public string RoleName { get; }
     public bool CanManageSettings { get; }
@@ -30,7 +105,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool IsBusy
     {
         get => isBusy;
-        private set { isBusy = value; OnPropertyChanged(); }
+        private set { isBusy = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsIdle)); SelectionChanged(); }
     }
     public string Status
     {
@@ -44,10 +119,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
         IsBusy = true;
         Status = "Загрузка данных из SQL Server…";
         Vehicles.Clear();
+        allVehicles.Clear();
+        SelectedVehicle = null;
+        OnPropertyChanged(nameof(ResultSummary));
         try
         {
             var vehicles = await fleet.GetVehiclesAsync();
-            foreach (var vehicle in vehicles) Vehicles.Add(vehicle);
+            allVehicles = vehicles;
+            foreach (var vehicleStatus in vehicles.Select(v => v.Status).Distinct())
+                if (!Statuses.Contains(vehicleStatus)) Statuses.Add(vehicleStatus);
+            ApplyFilter();
             Status = vehicles.Count == 0
                 ? "Подключение установлено. В базе пока нет транспортных средств."
                 : $"Подключение установлено. Загружено транспортных средств: {vehicles.Count}.";

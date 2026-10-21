@@ -18,6 +18,8 @@ public class MainViewModelTests
         public Func<Task<List<Vehicle>>> Load { get; set; } = () =>
             Task.FromResult(new List<Vehicle>());
         public Task<List<Vehicle>> GetVehiclesAsync() => Load();
+        public Task<VehicleResult> SaveAsync(VehicleData? original, VehicleData edited) => throw new NotSupportedException();
+        public Task<VehicleResult> DeleteAsync(VehicleData original) => throw new NotSupportedException();
     }
 
     [Fact]

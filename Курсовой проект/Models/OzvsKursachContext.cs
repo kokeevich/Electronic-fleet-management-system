@@ -160,6 +160,10 @@ public partial class OzvsKursachContext : DbContext
                 .HasMaxLength(50)
                 .HasDefaultValue("В эксплуатации");
             entity.Property(e => e.VinNumber).HasMaxLength(50);
+            // Проверка исходных значений в UPDATE/DELETE без добавления столбцов в БД.
+            foreach (var property in entity.Metadata.GetProperties())
+                if (property.Name != nameof(Vehicle.VehicleId))
+                    property.IsConcurrencyToken = true;
         });
 
         modelBuilder.Entity<VehicleAssignment>(entity =>
