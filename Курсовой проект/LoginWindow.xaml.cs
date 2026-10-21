@@ -14,11 +14,22 @@ namespace Курсовой_проект
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class LoginWindow : Window
     {
-        public MainWindow()
+        public LoginWindow()
         {
             InitializeComponent();
+        }
+
+        private void LoginButton_Click(object sender, RoutedEventArgs e)
+        {
+            ErrorTextBlock.Text = "Авторизация будет подключена на втором этапе проекта.";
+        }
+
+        private void PasswordBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+                LoginButton_Click(sender, e);
         }
     }
 }

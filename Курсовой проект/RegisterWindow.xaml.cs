@@ -23,5 +23,16 @@ namespace Курсовой_проект
         {
             InitializeComponent();
         }
+
+        private void LoginButton_Click(object sender, RoutedEventArgs e) =>
+            ErrorTextBlock.Text = "Авторизация будет подключена на втором этапе проекта.";
+
+        private void RegisterButton_Click(object sender, RoutedEventArgs e) =>
+            ErrorTextBlock.Text = "Управление пользователями будет доступно администратору.";
+
+        private void PasswordBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter) LoginButton_Click(sender, e);
+        }
     }
 }
