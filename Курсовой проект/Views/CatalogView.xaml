@@ -14,14 +14,13 @@
             <Label Content="_Поиск по данным карточки" Target="{Binding ElementName=SearchBox}" Padding="0,0,0,2"/>
             <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" Padding="8,4"/>
         </StackPanel>
-        <!-- Единая область действий над выбранной записью для будущих команд редактирования. -->
+        <!-- Действия над выбранной записью. -->
         <DockPanel Grid.Row="2" Margin="0,0,0,6">
             <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Foreground="#58736D" VerticalAlignment="Center" Margin="8,0,0,0"/>
             <WrapPanel>
                 <Button Content="Открыть карточку" Click="OpenRecord_Click" IsEnabled="{Binding CanOpenRecord}" Margin="0,0,8,0"/>
-                <Button Content="Изменить" IsEnabled="False"
-                        Visibility="{Binding ShowEditPlaceholder, Converter={StaticResource BoolVisibility}}"
-                        ToolTipService.ShowOnDisabled="True" ToolTip="В этом разделе доступен только просмотр."/>
+                <Button Content="Изменить" IsEnabled="{Binding CanEditRecord}" Click="EditRecord_Click"
+                        Visibility="{Binding CanManageSection, Converter={StaticResource BoolVisibility}}"/>
             </WrapPanel>
         </DockPanel>
         <ListView Grid.Row="3" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}"

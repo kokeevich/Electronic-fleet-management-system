@@ -10,16 +10,18 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
 {
     private readonly ICatalogService service;
     private readonly AccessService access;
+    private readonly ICatalogEditService? editor;
     private CatalogRow? selectedRow;
     private List<CatalogRow> allRows = new();
     private CatalogDefinition? selected;
     private string search = "", status = "Выберите раздел для просмотра.";
     private bool busy;
     private int request;
-    public CatalogViewModel(ICatalogService service, AccessService access)
+    public CatalogViewModel(ICatalogService service, AccessService access, ICatalogEditService? editor = null)
     {
         this.service = service;
         this.access = access;
+        this.editor = editor;
         Sections = CatalogDefinition.All.Where(x => access.Can(x.Permission)).ToList();
         selected = Sections.FirstOrDefault();
         RefreshCommand = new AsyncCommand(LoadAsync);
@@ -35,7 +37,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             if (selected == value) return;
             selected = value;
             search = "";
-            Changed(); Changed(nameof(Title)); Changed(nameof(Search)); Changed(nameof(ShowEditPlaceholder));
+            Changed(); Changed(nameof(Title)); Changed(nameof(Search)); Changed(nameof(CanManageSection));
             _ = LoadAsync();
         }
     }
@@ -43,11 +45,14 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     public CatalogRow? SelectedRow
     {
         get => selectedRow;
-        set { selectedRow = value; Changed(); Changed(nameof(CanOpenRecord)); }
+        set { selectedRow = value; Changed(); Changed(nameof(CanOpenRecord)); Changed(nameof(CanEditRecord)); }
     }
     public bool CanOpenRecord => !IsBusy && SelectedRow != null;
-    // Место будущей команды; права сохранения будут проверяться в соответствующем сервисе.
-    public bool ShowEditPlaceholder => SelectedSection?.Section switch
+    public bool CanEditRecord => CanOpenRecord && CanManageSection && SelectedRow!.Id > 0 && editor != null;
+    public CatalogEditorViewModel? CreateEditor() => CanEditRecord
+        ? new CatalogEditorViewModel(editor!, SelectedSection!.Section, SelectedRow!.Id) : null;
+    // Кнопка видна по роли; сервис независимо проверяет право сохранения.
+    public bool CanManageSection => SelectedSection?.Section switch
     {
         CatalogSection.Drivers or CatalogSection.Assignments => access.Can(Permission.ManageDrivers),
         CatalogSection.Documents => access.Can(Permission.ManageDocuments),
@@ -58,7 +63,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     };
     public string Search { get => search; set { search = value; Changed(); Filter(); } }
     public string Status { get => status; private set { status = value; Changed(); } }
-    public bool IsBusy { get => busy; private set { busy = value; Changed(); Changed(nameof(CanRefresh)); Changed(nameof(CanOpenRecord)); } }
+    public bool IsBusy { get => busy; private set { busy = value; Changed(); Changed(nameof(CanRefresh)); Changed(nameof(CanOpenRecord)); Changed(nameof(CanEditRecord)); } }
     public bool CanRefresh => !IsBusy && SelectedSection != null;
     public string CountText => $"Показано: {Rows.Count} из {allRows.Count}";
     public bool HasLoaded { get; private set; }
@@ -77,7 +82,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             if (current != request) return;
             allRows = new List<CatalogRow>(rows);
             Filter();
-            Status = rows.Count == 0 ? "В этом разделе пока нет записей." : $"Загружено записей: {rows.Count}. Только просмотр.";
+            Status = rows.Count == 0 ? "В этом разделе пока нет записей." : $"Загружено записей: {rows.Count}.";
         }
         catch (UnauthorizedAccessException)
         {

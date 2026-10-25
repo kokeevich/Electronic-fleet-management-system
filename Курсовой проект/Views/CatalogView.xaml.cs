@@ -22,4 +22,13 @@ public partial class CatalogView : UserControl
         if (DataContext is CatalogViewModel { CanOpenRecord: true, SelectedRow: { } row })
             new RecordDetailsWindow(row) { Owner = Window.GetWindow(this) }.ShowDialog();
     }
+
+    private async void EditRecord_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not CatalogViewModel catalog) return;
+        var editor = catalog.CreateEditor();
+        if (editor == null) return;
+        if (new CatalogEditWindow(editor) { Owner = Window.GetWindow(this) }.ShowDialog() == true)
+            await catalog.LoadAsync();
+    }
 }

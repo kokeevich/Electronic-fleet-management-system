@@ -60,6 +60,7 @@ public class CatalogTests : IDisposable
         {
             var rows = await service.ReadAsync(section.Section);
             Assert.NotEmpty(rows);
+            Assert.All(rows, row => Assert.True(row.Id > 0));
             Assert.All(rows, row => Assert.DoesNotContain("NOT-FOR-DISPLAY", row.ToString()));
         }
         var assignment = Assert.Single(await service.ReadAsync(CatalogSection.Assignments));
@@ -78,19 +79,20 @@ public class CatalogTests : IDisposable
     }
 
     [Fact]
-    public async Task RoleChecksApplyToServiceAndNotificationRecipients()
+    public async Task RoleChecksApplyAndNotificationsRemainUnavailable()
     {
         session.SignIn(new SessionUser(1, "Тест", "Диспетчер"));
-        var dispatcherRows = await service.ReadAsync(CatalogSection.Notifications);
-        Assert.Equal(new[] { "own-insurance", "public-insurance" }, dispatcherRows.Select(x => x.Title).OrderBy(x => x));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ReadAsync(CatalogSection.Notifications));
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ReadAsync(CatalogSection.Users));
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ReadAsync(CatalogSection.Roles));
         session.SignIn(new SessionUser(1, "Тест", "Механик"));
-        Assert.Equal(new[] { "own-maintenance", "public-maintenance" },
-            (await service.ReadAsync(CatalogSection.Notifications)).Select(x => x.Title).OrderBy(x => x));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ReadAsync(CatalogSection.Notifications));
         session.SignIn(new SessionUser(1, "Тест", "Наблюдатель"));
         var vm = new CatalogViewModel(service, access);
         Assert.DoesNotContain(vm.Sections, x => x.Section is CatalogSection.Users or CatalogSection.Roles or CatalogSection.Notifications);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ReadAsync(CatalogSection.Notifications));
+        session.SignIn(new SessionUser(1, "Тест", "Администратор"));
+        Assert.DoesNotContain(new CatalogViewModel(service, access).Sections, x => x.Section == CatalogSection.Notifications);
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ReadAsync(CatalogSection.Notifications));
         session.SignOut();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ReadAsync(CatalogSection.Drivers));

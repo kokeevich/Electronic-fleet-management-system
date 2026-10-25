@@ -1,0 +1,189 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Xunit;
+using Курсовой_проект.Models;
+using Курсовой_проект.Services;
+using Курсовой_проект.ViewModels;
+
+namespace FleetManagement.Tests;
+
+public class CatalogEditTests : IDisposable
+{
+    private readonly SqliteConnection connection = new("Data Source=:memory:");
+    private readonly DbContextOptions<OzvsKursachContext> options;
+    private readonly UserSession session = new();
+    private readonly CatalogEditService service;
+    private readonly AccessService access;
+    private static readonly (CatalogSection Section, int Id)[] Records =
+    [
+        (CatalogSection.Drivers, 10), (CatalogSection.Assignments, 20), (CatalogSection.Documents, 30),
+        (CatalogSection.Maintenance, 40), (CatalogSection.Parts, 50), (CatalogSection.WorkParts, 60),
+        (CatalogSection.Users, 5), (CatalogSection.Roles, 4)
+    ];
+    public CatalogEditTests()
+    {
+        connection.Open();
+        options = new DbContextOptionsBuilder<OzvsKursachContext>().UseSqlite(connection).Options;
+        access = new AccessService(session);
+        service = new CatalogEditService(access, session, () => new OzvsKursachContext(options));
+        using var db = new OzvsKursachContext(options);
+        db.Database.EnsureCreated();
+        db.Roles.AddRange(new Role { RoleId = 1, Name = "Администратор" },
+            new Role { RoleId = 2, Name = "Диспетчер" }, new Role { RoleId = 3, Name = "Механик" },
+            new Role { RoleId = 4, Name = "Наблюдатель" });
+        for (var id = 1; id <= 5; id++)
+            db.Users.Add(new User { UserId = id, RoleId = Math.Min(id, 4), FirstName = "Иван", LastName = "Тестов",
+                Login = "test" + id, Password = "HASH-MUST-NOT-CHANGE" });
+        db.Drivers.Add(new Driver { DriverId = 10, LastName = "Тестов", FirstName = "Олег",
+            LicenseNumber = "D-1", LicenseCategory = "B", LicenseIssueDate = new(2020, 1, 1), LicenseExpiryDate = new(2030, 1, 1) });
+        db.Vehicles.Add(new Vehicle { VehicleId = 10, LicensePlate = "А123БВ196", Brand = "Kia",
+            Model = "Rio", YearOfManufacture = 2021, Mileage = 1000, Status = "В эксплуатации" });
+        db.VehicleAssignments.Add(new VehicleAssignment { AssignmentId = 20, VehicleId = 10, DriverId = 10,
+            StartDate = new(2026, 1, 1), EndDate = new(2026, 6, 1) });
+        db.Documents.Add(new Document { DocumentId = 30, VehicleId = 10, DocumentType = "ОСАГО",
+            DocumentNumber = "P-1", IssueDate = new(2026, 1, 1), ExpiryDate = new(2027, 1, 1), Cost = 100 });
+        db.MaintenanceRepairs.Add(new MaintenanceRepair { WorkId = 40, VehicleId = 10, WorkDate = new(2026, 1, 1),
+            WorkType = "ТО", Mileage = 1000, Cost = 1000 });
+        db.Parts.Add(new Part { PartId = 50, Name = "Фильтр", ArticleNumber = "F-1", Cost = 100, Quantity = 10 });
+        db.WorkParts.Add(new WorkPart { CompositionId = 60, WorkId = 40, PartId = 50, Quantity = 1 });
+        db.SaveChanges();
+        session.SignIn(new SessionUser(1, "Администратор", "Администратор"));
+    }
+    public void Dispose() => connection.Dispose();
+    private async Task<CatalogEditResult> Change(CatalogSection section, int id, string key, string value)
+    {
+        var data = await service.LoadAsync(section, id);
+        var values = data.Original.ToDictionary(x => x.Key, x => x.Value);
+        values[key] = value;
+        return await service.SaveAsync(data, values);
+    }
+
+    [Fact]
+    public async Task EveryEnabledRegistryCanBeEditedAndPasswordsAndRoleNamesArePreserved()
+    {
+        var catalog = new CatalogViewModel(new CatalogService(access, session, () => new OzvsKursachContext(options)), access, service);
+        await catalog.LoadAsync();
+        catalog.SelectedRow = Assert.Single(catalog.Rows);
+        Assert.True(catalog.CanEditRecord);
+        Assert.NotNull(catalog.CreateEditor());
+        var changes = new[]
+        {
+            ("Phone", "987"), ("EndDate", "02.06.2026"), ("Cost", "125.50"),
+            ("Description", "Строка 1\nСтрока 2"), ("Category", "Фильтры"), ("Quantity", "3"),
+            ("FirstName", "Пётр"), ("Description", "Только просмотр")
+        };
+        for (var i = 0; i < Records.Length; i++)
+        {
+            var (section, id) = Records[i];
+            var (key, value) = changes[i];
+            Assert.True((await Change(section, id, key, value)).Success);
+            var data = await service.LoadAsync(section, id);
+            Assert.Equal(key == "Cost" ? "125.5" : value, data.Original[key]);
+            Assert.DoesNotContain(data.Fields, x => x.Key == "Password");
+        }
+        using var db = new OzvsKursachContext(options);
+        Assert.All(await db.Users.ToListAsync(), x => Assert.Equal("HASH-MUST-NOT-CHANGE", x.Password));
+        Assert.Equal("Наблюдатель", (await db.Roles.FindAsync(4))!.Name);
+        Assert.Equal(10, (await db.Parts.FindAsync(50))!.Quantity); // состав работ не списывает склад автоматически
+        Assert.Equal(1000m, (await db.MaintenanceRepairs.FindAsync(40))!.Cost);
+    }
+
+    [Fact]
+    public async Task PermissionsAreEnforcedForLoadAndSaveAcrossAllRegistries()
+    {
+        var snapshots = new List<CatalogEditData>();
+        foreach (var (section, id) in Records) snapshots.Add(await service.LoadAsync(section, id));
+        foreach (var (id, role, allowed) in new[]
+        {
+            (2, "Диспетчер", new[] { CatalogSection.Drivers, CatalogSection.Assignments, CatalogSection.Documents }),
+            (3, "Механик", new[] { CatalogSection.Maintenance, CatalogSection.Parts, CatalogSection.WorkParts }),
+            (4, "Наблюдатель", Array.Empty<CatalogSection>())
+        })
+        {
+            session.SignIn(new SessionUser(id, "Тест", role));
+            foreach (var snapshot in snapshots)
+            {
+                if (allowed.Contains(snapshot.Section))
+                {
+                    Assert.NotEmpty((await service.LoadAsync(snapshot.Section, snapshot.Id)).Fields);
+                    Assert.True((await service.SaveAsync(snapshot, snapshot.Original)).Success);
+                }
+                else
+                {
+                    await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync(snapshot.Section, snapshot.Id));
+                    await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.SaveAsync(snapshot, snapshot.Original));
+                }
+            }
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync(CatalogSection.Notifications, 1));
+        }
+    }
+
+    [Fact]
+    public async Task InvalidValuesDuplicatesAndOverlappingAssignmentsDoNotSave()
+    {
+        Assert.False((await Change(CatalogSection.Drivers, 10, "FirstName", "")).Success);
+        Assert.False((await Change(CatalogSection.Drivers, 10, "LicenseExpiryDate", "01.01.2010")).Success);
+        Assert.False((await Change(CatalogSection.Documents, 30, "VehicleId", "999")).Success);
+        Assert.False((await Change(CatalogSection.Documents, 30, "ExpiryDate", "")).Success);
+        Assert.False((await Change(CatalogSection.Documents, 30, "Cost", "1,234")).Success);
+        Assert.False((await Change(CatalogSection.Maintenance, 40, "NextMaintenanceMileage", "500")).Success);
+        Assert.False((await Change(CatalogSection.Parts, 50, "Quantity", "-1")).Success);
+        Assert.False((await Change(CatalogSection.WorkParts, 60, "Quantity", "0")).Success);
+        Assert.False((await Change(CatalogSection.Users, 5, "Login", "test1")).Success);
+        using (var db = new OzvsKursachContext(options))
+        {
+            db.VehicleAssignments.Add(new VehicleAssignment { VehicleId = 10, DriverId = 10,
+                StartDate = new(2026, 6, 2), EndDate = new(2026, 12, 1) });
+            db.Parts.Add(new Part { Name = "Другая", ArticleNumber = "F-2", Cost = 50 });
+            await db.SaveChangesAsync();
+        }
+        Assert.False((await Change(CatalogSection.Assignments, 20, "EndDate", "02.06.2026")).Success);
+        Assert.False((await Change(CatalogSection.Parts, 50, "ArticleNumber", "F-2")).Success);
+        Assert.Equal("01.06.2026", (await service.LoadAsync(CatalogSection.Assignments, 20)).Original["EndDate"]);
+        Assert.Equal("Иван", (await service.LoadAsync(CatalogSection.Users, 5)).Original["FirstName"]);
+    }
+
+    [Fact]
+    public async Task StaleSnapshotsAndRevokedRolesCannotWrite()
+    {
+        var old = await service.LoadAsync(CatalogSection.Parts, 50);
+        Assert.True((await Change(CatalogSection.Parts, 50, "Name", "Новый фильтр")).Success);
+        Assert.False((await service.SaveAsync(old, old.Original)).Success);
+        Assert.False((await Change(CatalogSection.Users, 1, "RoleId", "4")).Success);
+        using (var db = new OzvsKursachContext(options))
+        {
+            var admin = (await db.Users.FindAsync(1))!;
+            admin.RoleId = 4;
+            await db.SaveChangesAsync();
+        }
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync(CatalogSection.Parts, 50));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.SaveAsync(old, old.Original));
+    }
+
+    private sealed class PendingEditor : ICatalogEditService
+    {
+        public TaskCompletionSource<CatalogEditResult> Pending { get; } = new();
+        public int Saves;
+        public Task<CatalogEditData> LoadAsync(CatalogSection section, int id) => Task.FromResult(
+            new CatalogEditData(section, id, "Запчасть", new[] { new EditField(new("Name", "Название"), "Фильтр", Array.Empty<EditOption>()) },
+                new Dictionary<string, string> { ["Name"] = "Фильтр" }));
+        public Task<CatalogEditResult> SaveAsync(CatalogEditData data, IReadOnlyDictionary<string, string> values)
+        { Saves++; return Pending.Task; }
+    }
+    [Fact]
+    public async Task EditorPreventsDuplicateSubmissionAndHidesTechnicalErrors()
+    {
+        var pending = new PendingEditor();
+        var vm = new CatalogEditorViewModel(pending, CatalogSection.Parts, 50);
+        await vm.LoadAsync();
+        Assert.True(vm.CanSave);
+        var first = vm.SaveAsync();
+        Assert.False(vm.CanClose);
+        Assert.False(await vm.SaveAsync());
+        Assert.Equal(1, pending.Saves);
+        pending.Pending.SetException(new Exception("Server=private;Password=secret"));
+        Assert.False(await first);
+        Assert.DoesNotContain("secret", vm.Message);
+        Assert.True(vm.CanSave);
+    }
+}

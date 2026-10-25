@@ -40,7 +40,7 @@ public class WorkspaceTests
     {
         var (workspace, service) = Create("Администратор");
         Assert.True(workspace.IsVehicles);
-        Assert.Equal(11, workspace.Pages.Count); // транспорт, девять таблиц, подключение
+        Assert.Equal(10, workspace.Pages.Count); // транспорт, восемь таблиц, подключение
         workspace.SelectedPage = workspace.Pages.Single(x => x.Definition?.Section == CatalogSection.Documents);
         Assert.True(workspace.IsCatalog);
         Assert.False(workspace.IsVehicles);
@@ -61,16 +61,16 @@ public class WorkspaceTests
         Assert.DoesNotContain(observer.Pages, x => x.Kind == WorkspacePageKind.Connection ||
             x.Definition?.Section is CatalogSection.Users or CatalogSection.Roles or CatalogSection.Notifications);
         observer.SelectedPage = observer.Pages.Single(x => x.Definition?.Section == CatalogSection.Drivers);
-        Assert.False(observer.Catalog.ShowEditPlaceholder);
+        Assert.False(observer.Catalog.CanManageSection);
         var before = observer.SelectedPage;
         observer.SelectedPage = new WorkspacePage("Подключение", WorkspacePageKind.Connection);
         Assert.Equal(before, observer.SelectedPage);
 
         var (mechanic, _) = Create("Механик");
         mechanic.SelectedPage = mechanic.Pages.Single(x => x.Definition?.Section == CatalogSection.Drivers);
-        Assert.False(mechanic.Catalog.ShowEditPlaceholder);
+        Assert.False(mechanic.Catalog.CanManageSection);
         mechanic.SelectedPage = mechanic.Pages.Single(x => x.Definition?.Section == CatalogSection.Maintenance);
-        Assert.True(mechanic.Catalog.ShowEditPlaceholder);
+        Assert.True(mechanic.Catalog.CanManageSection);
     }
 
     [Fact]
