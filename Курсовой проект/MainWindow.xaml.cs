@@ -7,11 +7,12 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel;
     public event EventHandler? LogoutRequested;
-    public MainWindow(MainViewModel viewModel)
+    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog)
     {
         InitializeComponent();
         this.viewModel = viewModel;
         DataContext = viewModel;
+        CatalogPanel.DataContext = catalog;
         Loaded += WindowLoaded;
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
     }

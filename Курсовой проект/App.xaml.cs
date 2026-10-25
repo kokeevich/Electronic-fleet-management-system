@@ -21,6 +21,8 @@ public partial class App : Application
         collection.AddSingleton<IRegistrationService, RegistrationService>();
         collection.AddSingleton<IFleetService, FleetService>();
         collection.AddSingleton<IVehicleStore, VehicleStore>();
+        collection.AddSingleton<ICatalogService, CatalogService>();
+        collection.AddTransient<CatalogViewModel>();
         collection.AddTransient<LoginViewModel>();
         collection.AddTransient<RegisterViewModel>();
         collection.AddTransient<RegisterWindow>();
