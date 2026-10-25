@@ -19,6 +19,11 @@ public partial class CatalogEditWindow : Window
         Loaded -= Load;
         await viewModel.LoadAsync();
     }
+    private void Password_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.PasswordBox { DataContext: Курсовой_проект.Services.EditField field } box)
+            field.Value = box.Password;
+    }
     private async void Save_Click(object sender, RoutedEventArgs e)
     {
         if (await viewModel.SaveAsync()) DialogResult = true;

@@ -29,14 +29,25 @@ public sealed class CatalogEditService : ICatalogEditService
         var actor = session.Current;
         await using var db = createContext();
         await CheckActorAsync(db, section);
-        var entity = await FindAsync(db, section, id) ?? throw new InvalidOperationException("Запись удалена. Обновите список.");
+        if (id == 0 && section == CatalogSection.Roles) throw new UnauthorizedAccessException();
+        var entity = (id == 0 ? NewEntity(section) : await FindAsync(db, section, id)) ?? throw new InvalidOperationException("Запись удалена. Обновите список.");
         var specs = CatalogEditRules.Fields(section);
         var original = Snapshot(entity, specs);
+        if (id == 0 && section == CatalogSection.Drivers)
+        {
+            original["LicenseIssueDate"] = "";
+            original["LicenseExpiryDate"] = "";
+        }
         var fields = new List<EditField>();
         foreach (var spec in specs)
             fields.Add(new EditField(spec, original[spec.Key], await OptionsAsync(db, spec)));
         if (!ReferenceEquals(actor, session.Current)) throw new UnauthorizedAccessException();
-        var title = CatalogDefinition.All.Single(x => x.Section == section).Title;
+        if (id == 0 && section == CatalogSection.Users)
+        {
+            fields.Add(new EditField(new("Password", "Пароль (8–128 символов)", MaxLength:128), "", []));
+            fields.Add(new EditField(new("PasswordConfirmation", "Повторите пароль", MaxLength:128), "", []));
+        }
+        var title = (id == 0 ? "Добавление · " : "Изменение · ") + CatalogDefinition.All.Single(x => x.Section == section).Title;
         if (entity is Role role) title += " · " + role.Name;
         return new(section, id, title, fields, original);
     }
@@ -49,11 +60,13 @@ public sealed class CatalogEditService : ICatalogEditService
         // Чтение, проверка конфликтов/связей и запись выполняются одной транзакцией.
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         await CheckActorAsync(db, original.Section);
-        var entity = await FindAsync(db, original.Section, original.Id);
+        var creating = original.Id == 0;
+        if (creating && original.Section == CatalogSection.Roles) throw new UnauthorizedAccessException();
+        var entity = creating ? NewEntity(original.Section) : await FindAsync(db, original.Section, original.Id);
         if (entity == null) return new(false, "Запись удалена. Обновите список.");
         var specs = CatalogEditRules.Fields(original.Section);
         var current = Snapshot(entity, specs);
-        if (current.Any(x => !original.Original.TryGetValue(x.Key, out var old) || old != x.Value))
+        if (!creating && current.Any(x => !original.Original.TryGetValue(x.Key, out var old) || old != x.Value))
             return new(false, "Запись изменена другим пользователем. Закройте карточку, обновите список и откройте её заново.");
         foreach (var spec in specs)
         {
@@ -91,12 +104,22 @@ public sealed class CatalogEditService : ICatalogEditService
             else return new(false, "Тип поля не поддерживается.");
             property.SetValue(entity, value);
         }
+        if (creating && entity is User user)
+        {
+            var password = values.GetValueOrDefault("Password") ?? "";
+            if (password.Length < 8 || password.Length > 128 || string.IsNullOrWhiteSpace(password))
+                return new(false, "Пароль должен содержать от 8 до 128 символов.");
+            if (password != values.GetValueOrDefault("PasswordConfirmation"))
+                return new(false, "Пароли не совпадают.");
+            user.Password = PasswordHasher.Hash(password);
+        }
         var error = await ValidateAsync(db, entity);
         if (error != null) return new(false, error);
         access.Require(CatalogEditRules.PermissionFor(original.Section));
         if (!ReferenceEquals(actor, session.Current)) throw new UnauthorizedAccessException();
         try
         {
+            if (creating) db.Add(entity);
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
             return new(true, "Изменения сохранены.");
@@ -106,6 +129,62 @@ public sealed class CatalogEditService : ICatalogEditService
         { return new(false, "Такой логин, артикул или номер удостоверения уже существует."); }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 547 })
         { return new(false, "Связанная запись удалена или данные нарушают ограничения БД. Обновите список."); }
+    }
+
+    // Новые записи используют ту же форму и те же проверки, что и редактирование.
+    private static object NewEntity(CatalogSection section) => section switch
+    {
+        CatalogSection.Drivers => new Driver(),
+        CatalogSection.Assignments => new VehicleAssignment { StartDate = DateOnly.FromDateTime(DateTime.Today) },
+        CatalogSection.Documents => new Document { IssueDate = DateOnly.FromDateTime(DateTime.Today) },
+        CatalogSection.Maintenance => new MaintenanceRepair { WorkDate = DateOnly.FromDateTime(DateTime.Today) },
+        CatalogSection.Parts => new Part(),
+        CatalogSection.WorkParts => new WorkPart { Quantity = 1 },
+        CatalogSection.Users => new User(),
+        _ => throw new UnauthorizedAccessException()
+    };
+
+    public async Task<CatalogEditResult> DeleteAsync(CatalogEditData original)
+    {
+        access.Require(CatalogEditRules.PermissionFor(original.Section));
+        if (original.Section == CatalogSection.Roles) return new(false, "Системные роли нельзя удалять.");
+        var actor = session.Current;
+        await using var db = createContext();
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        await CheckActorAsync(db, original.Section);
+        var entity = await FindAsync(db, original.Section, original.Id);
+        if (entity == null) return new(false, "Запись уже удалена. Обновите список.");
+        if (Snapshot(entity, CatalogEditRules.Fields(original.Section))
+            .Any(x => !original.Original.TryGetValue(x.Key, out var old) || old != x.Value))
+            return new(false, "Запись изменена другим пользователем. Обновите список перед удалением.");
+        var linked = entity switch
+        {
+            Driver x => await db.VehicleAssignments.AnyAsync(y => y.DriverId == x.DriverId) ||
+                        await db.Documents.AnyAsync(y => y.DriverId == x.DriverId),
+            MaintenanceRepair x => await db.WorkParts.AnyAsync(y => y.WorkId == x.WorkId),
+            Part x => await db.WorkParts.AnyAsync(y => y.PartId == x.PartId),
+            User x => await db.Notifications.AnyAsync(y => y.UserId == x.UserId),
+            _ => false
+        };
+        if (linked) return new(false, "Удаление невозможно: на запись ссылаются другие данные.");
+        if (entity is User user)
+        {
+            if (user.UserId == actor!.UserId) return new(false, "Нельзя удалить собственную учётную запись.");
+            if (await db.Roles.AnyAsync(x => x.RoleId == user.RoleId && x.Name == "Администратор") &&
+                !await db.Users.AnyAsync(x => x.UserId != user.UserId && x.Role.Name == "Администратор"))
+                return new(false, "В системе должен остаться администратор.");
+        }
+        if (!ReferenceEquals(actor, session.Current)) throw new UnauthorizedAccessException();
+        db.Remove(entity);
+        try
+        {
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return new(true, "Запись удалена.");
+        }
+        catch (DbUpdateConcurrencyException) { return new(false, "Запись изменена. Обновите список."); }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 547 })
+        { return new(false, "Удаление невозможно: запись используется в других данных."); }
     }
 
     private async Task<string?> ValidateAsync(OzvsKursachContext db, object entity)
@@ -154,6 +233,7 @@ public sealed class CatalogEditService : ICatalogEditService
                 var newRole = await db.Roles.Where(y => y.RoleId == x.RoleId).Select(y => y.Name).SingleAsync();
                 if (x.UserId == session.Current!.UserId && newRole != session.Current.Role)
                     return "Нельзя изменить собственную роль в текущем сеансе.";
+                if (x.UserId == 0) break;
                 var oldRoleId = db.Entry(x).Property(y => y.RoleId).OriginalValue;
                 var oldRole = await db.Roles.Where(y => y.RoleId == oldRoleId).Select(y => y.Name).SingleAsync();
                 if (oldRole == "Администратор" && newRole != "Администратор" &&

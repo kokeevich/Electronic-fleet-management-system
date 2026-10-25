@@ -59,6 +59,89 @@ public class CatalogEditTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAndDeleteEveryMutableRegistryAndHashNewPassword()
+    {
+        foreach (var (section, id) in Records.Where(x => x.Section != CatalogSection.Roles))
+        {
+            var template = await service.LoadAsync(section, id);
+            var draft = await service.LoadAsync(section, 0);
+            var values = template.Original.ToDictionary(x => x.Key, x => x.Value);
+            switch (section)
+            {
+                case CatalogSection.Drivers: values["LicenseNumber"] = "NEW-LICENSE"; break;
+                case CatalogSection.Assignments:
+                    values["StartDate"] = "01.01.2028"; values["EndDate"] = ""; break;
+                case CatalogSection.Parts: values["ArticleNumber"] = "NEW-PART"; break;
+                case CatalogSection.WorkParts:
+                    await using (var db = new OzvsKursachContext(options))
+                    {
+                        db.Parts.Add(new Part { PartId = 99, Name = "Новая", ArticleNumber = "P99", Cost = 10 });
+                        await db.SaveChangesAsync();
+                    }
+                    values["PartId"] = "99"; break;
+                case CatalogSection.Users:
+                    values["Login"] = "new_user";
+                    values["Password"] = "NewPassword!2026";
+                    values["PasswordConfirmation"] = "wrong";
+                    Assert.False((await service.SaveAsync(draft, values)).Success);
+                    values["PasswordConfirmation"] = values["Password"];
+                    break;
+            }
+            Assert.True((await service.SaveAsync(draft, values)).Success, section.ToString());
+            var rows = await new CatalogService(access, session, () => new OzvsKursachContext(options)).ReadAsync(section);
+            var newId = rows.Max(x => x.Id);
+            Assert.True(newId > id);
+            if (section == CatalogSection.Users)
+            {
+                await using var db = new OzvsKursachContext(options);
+                var user = await db.Users.FindAsync(newId);
+                Assert.True(PasswordHasher.Verify(values["Password"], user!.Password));
+            }
+            var created = await service.LoadAsync(section, newId);
+            Assert.True((await service.DeleteAsync(created)).Success, section.ToString());
+            Assert.DoesNotContain(await new CatalogService(access, session, () => new OzvsKursachContext(options)).ReadAsync(section),
+                x => x.Id == newId);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteProtectsRelationsSelfAndStaleRecordsAndFixedRoles()
+    {
+        foreach (var (section, id) in new[] { (CatalogSection.Drivers, 10), (CatalogSection.Maintenance, 40),
+            (CatalogSection.Parts, 50), (CatalogSection.Users, 1), (CatalogSection.Roles, 4) })
+            Assert.False((await service.DeleteAsync(await service.LoadAsync(section, id))).Success);
+        var stale = await service.LoadAsync(CatalogSection.Documents, 30);
+        Assert.True((await Change(CatalogSection.Documents, 30, "DocumentNumber", "CHANGED")).Success);
+        Assert.False((await service.DeleteAsync(stale)).Success);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync(CatalogSection.Roles, 0));
+        Assert.True((await service.DeleteAsync(await service.LoadAsync(CatalogSection.WorkParts, 60))).Success);
+        Assert.True((await service.DeleteAsync(await service.LoadAsync(CatalogSection.Parts, 50))).Success);
+    }
+
+    [Fact]
+    public async Task CreateAndDeleteEnforcePermissionsEvenWithPreparedData()
+    {
+        var driver = await service.LoadAsync(CatalogSection.Drivers, 10);
+        var draft = await service.LoadAsync(CatalogSection.Drivers, 0);
+        session.SignIn(new SessionUser(3, "Механик", "Механик"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync(CatalogSection.Drivers, 0));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.SaveAsync(draft, driver.Original));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.DeleteAsync(driver));
+        var part = await service.LoadAsync(CatalogSection.Parts, 0);
+        var values = new Dictionary<string, string> { ["Name"] = "Фильтр", ["ArticleNumber"] = "M-NEW",
+            ["Cost"] = "10", ["Quantity"] = "2", ["Category"] = "" };
+        Assert.True((await service.SaveAsync(part, values)).Success);
+        await using (var db = new OzvsKursachContext(options))
+        {
+            var created = await db.Parts.SingleAsync(x => x.ArticleNumber == "M-NEW");
+            Assert.True((await service.DeleteAsync(await service.LoadAsync(CatalogSection.Parts, created.PartId))).Success);
+        }
+        session.SignIn(new SessionUser(4, "Наблюдатель", "Наблюдатель"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync(CatalogSection.Parts, 0));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.DeleteAsync(driver));
+    }
+
+    [Fact]
     public async Task EveryEnabledRegistryCanBeEditedAndPasswordsAndRoleNamesArePreserved()
     {
         var catalog = new CatalogViewModel(new CatalogService(access, session, () => new OzvsKursachContext(options)), access, service);
@@ -162,6 +245,7 @@ public class CatalogEditTests : IDisposable
 
     private sealed class PendingEditor : ICatalogEditService
     {
+        public Task<CatalogEditResult> DeleteAsync(CatalogEditData original) => throw new NotSupportedException();
         public TaskCompletionSource<CatalogEditResult> Pending { get; } = new();
         public int Saves;
         public Task<CatalogEditData> LoadAsync(CatalogSection section, int id) => Task.FromResult(

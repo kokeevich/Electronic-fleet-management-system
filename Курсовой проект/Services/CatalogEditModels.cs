@@ -6,6 +6,7 @@ public sealed class EditField(EditSpec spec, string value, IReadOnlyList<EditOpt
 {
     public string Key => spec.Key;
     public string Label => spec.Label + (spec.Required ? " *" : "");
+    public bool IsPassword => spec.Key is "Password" or "PasswordConfirmation";
     public bool IsChoice => spec.Choice != null;
     public bool IsMultiline => spec.Key == "Description";
     public int MaxLength => spec.MaxLength > 0 ? spec.MaxLength : 100;
@@ -19,6 +20,7 @@ public sealed record CatalogEditResult(bool Success, string Message);
 public interface ICatalogEditService
 {
     Task<CatalogEditData> LoadAsync(CatalogSection section, int id);
+    Task<CatalogEditResult> DeleteAsync(CatalogEditData original);
     Task<CatalogEditResult> SaveAsync(CatalogEditData original, IReadOnlyDictionary<string, string> values);
 }
 

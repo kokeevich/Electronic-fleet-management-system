@@ -18,7 +18,11 @@
         <DockPanel Grid.Row="2" Margin="0,0,0,6">
             <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Foreground="#58736D" VerticalAlignment="Center" Margin="8,0,0,0"/>
             <WrapPanel>
-                <Button Content="Открыть карточку" Click="OpenRecord_Click" IsEnabled="{Binding CanOpenRecord}" Margin="0,0,8,0"/>
+                <Button Content="Добавить" Click="AddRecord_Click" IsEnabled="{Binding CanCreateRecord}" Margin="0,0,8,0"
+                        Visibility="{Binding CanCreateDelete, Converter={StaticResource BoolVisibility}}"/>
+                <Button Content="Удалить" Click="DeleteRecord_Click" IsEnabled="{Binding CanDeleteRecord}" Margin="0,0,8,0"
+                        Background="#FCEBE9" Foreground="#B42318"
+                        Visibility="{Binding CanCreateDelete, Converter={StaticResource BoolVisibility}}"/>
                 <Button Content="Изменить" IsEnabled="{Binding CanEditRecord}" Click="EditRecord_Click"
                         Visibility="{Binding CanManageSection, Converter={StaticResource BoolVisibility}}"/>
             </WrapPanel>
@@ -37,7 +41,7 @@
                                        TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
                             <TextBlock Text="{Binding Subtitle}" Foreground="#4D6B65" Margin="0,2,0,0"
                                        FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="{Binding Subtitle}"/>
-                            <TextBlock Text="{Binding DetailsPreview}" Foreground="#58736D" Margin="0,2,0,0"
+                            <TextBlock Text="{Binding DetailsPreview}" ToolTip="{Binding Details}" Foreground="#58736D" Margin="0,2,0,0"
                                        FontSize="12" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                         <Border Grid.Column="1" Background="#E3F3EF" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">

@@ -63,7 +63,8 @@
                                 <WrapPanel>
                                     <Button Content="Добавить" Click="AddVehicle_Click" IsEnabled="{Binding CanAdd}"
                                             Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}" Margin="0,0,8,0"/>
-                                    <Button Content="Открыть карточку" Click="OpenVehicle_Click" IsEnabled="{Binding CanOpenCard}" Margin="0,0,8,0"/>
+                                    <Button Content="Изменить" Click="OpenVehicle_Click" IsEnabled="{Binding CanEditSelection}" Margin="0,0,8,0"
+                                            Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}"/>
                                     <Button Content="Удалить" Click="DeleteVehicle_Click" IsEnabled="{Binding CanEditSelection}"
                                             Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}"
                                             Background="#FCEBE9" Foreground="#B42318" Margin="0"/>

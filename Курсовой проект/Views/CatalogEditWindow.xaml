@@ -19,6 +19,7 @@
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPassword}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
                                                 <DataTrigger Binding="{Binding IsChoice}" Value="True">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
@@ -30,6 +31,9 @@
                                         </Style>
                                     </TextBox.Style>
                                 </TextBox>
+                                <PasswordBox PasswordChanged="Password_Changed" MaxLength="128" Padding="8,5"
+                                             Visibility="{Binding IsPassword, Converter={StaticResource BoolVisibility}}"
+                                             AutomationProperties.Name="{Binding Label}"/>
                                 <ComboBox ItemsSource="{Binding Options}" SelectedValue="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                           SelectedValuePath="Value" DisplayMemberPath="Label" Padding="8,5"
                                           Visibility="{Binding IsChoice, Converter={StaticResource BoolVisibility}}"

@@ -33,7 +33,7 @@ public sealed class CatalogEditorViewModel(ICatalogEditService service, CatalogS
             Title = original.Title;
             foreach (var field in original.Fields) Fields.Add(field);
             Message = section == CatalogSection.Roles ? "Название роли закреплено правами доступа. Можно изменить описание."
-                : section == CatalogSection.Users ? "Пароль не изменяется. Изменённая роль применяется при следующем входе."
+                : section == CatalogSection.Users && id != 0 ? "Пароль не изменяется. Изменённая роль применяется при следующем входе."
                 : "";
         }
         catch (UnauthorizedAccessException) { Message = "Недостаточно прав или роль изменилась. Войдите заново."; }
