@@ -22,7 +22,10 @@ public sealed record CatalogDefinition(CatalogSection Section, string Title, Per
 }
 
 // Только данные для просмотра. Сущности EF и пароли не передаются в интерфейс.
-public sealed record CatalogRow(string Title, string Subtitle, string Details, string Badge);
+public sealed record CatalogRow(string Title, string Subtitle, string Details, string Badge)
+{
+    public string DetailsPreview => Details.Replace("\r", "").Replace("\n", " · ");
+}
 public interface ICatalogService
 {
     Task<List<CatalogRow>> ReadAsync(CatalogSection section);

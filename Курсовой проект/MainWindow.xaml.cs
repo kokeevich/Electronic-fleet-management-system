@@ -11,8 +11,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         this.viewModel = viewModel;
-        DataContext = viewModel;
-        CatalogPanel.DataContext = catalog;
+        DataContext = new WorkspaceViewModel(viewModel, catalog);
         Loaded += WindowLoaded;
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
     }

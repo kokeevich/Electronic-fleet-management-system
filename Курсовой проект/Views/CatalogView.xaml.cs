@@ -16,4 +16,10 @@ public partial class CatalogView : UserControl
         if (DataContext is CatalogViewModel vm && !vm.HasLoaded && !vm.IsBusy)
             await vm.LoadAsync();
     }
+
+    private void OpenRecord_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is CatalogViewModel { CanOpenRecord: true, SelectedRow: { } row })
+            new RecordDetailsWindow(row) { Owner = Window.GetWindow(this) }.ShowDialog();
+    }
 }

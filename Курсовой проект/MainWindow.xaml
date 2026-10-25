@@ -2,133 +2,137 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:Курсовой_проект.Views"
-        Title="Автопарк — управление транспортом" Width="1120" Height="720"
-        MinWidth="850" MinHeight="560" WindowStartupLocation="CenterScreen">
-    <Grid Margin="28">
+        Title="Автопарк" Width="1120" Height="720" MinWidth="850" MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="16,10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <DockPanel Margin="0,0,0,24">
-          <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" MaxWidth="280">
-            <TextBlock Text="{Binding UserName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-            <TextBlock Text="{Binding RoleName}" Foreground="#58736D" Margin="0,4"/>
-            <Button Content="Выйти" Click="Logout_Click" HorizontalAlignment="Right" IsEnabled="{Binding IsIdle}"/>
-          </StackPanel>
-          <StackPanel>
-            <TextBlock Text="АВТОПАРК" Foreground="#0F766E" FontWeight="Bold"/>
-            <TextBlock Text="Управление транспортом" FontSize="30" FontWeight="SemiBold" Margin="0,6,0,4"/>
-            <TextBlock Text="Транспорт организации и состояние подключения" Foreground="#58736D"/>
-          </StackPanel>
+        <DockPanel Margin="0,0,0,8">
+            <Button DockPanel.Dock="Right" Content="Выйти" Click="Logout_Click"
+                    IsEnabled="{Binding Fleet.IsIdle}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+            <StackPanel DockPanel.Dock="Right" MaxWidth="300" VerticalAlignment="Center" Margin="16,0,0,0">
+                <TextBlock Text="{Binding Fleet.UserName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Fleet.RoleName}" Foreground="#58736D" FontSize="12"/>
+            </StackPanel>
+            <TextBlock Text="АВТОПАРК" Foreground="#0F766E" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </DockPanel>
-        <TabControl x:Name="MainTabs" Grid.Row="1" Background="White" BorderBrush="#D8E6E0" Padding="20">
-            <TabItem Header="Транспорт">
-                <Grid Margin="12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <DockPanel Margin="0,0,0,16">
-                        <Button DockPanel.Dock="Right" Content="Обновить" Command="{Binding RefreshCommand}" IsEnabled="{Binding IsIdle}"/>
-                        <TextBlock Text="Транспортные средства" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    </DockPanel>
-                    <Grid Grid.Row="1" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="210"/></Grid.ColumnDefinitions>
-                        <StackPanel Margin="0,0,16,0">
-                            <Label Content="_Поиск по госномеру, марке или модели" Target="{Binding ElementName=SearchBox}" Padding="0,0,0,5"/>
-                            <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="8"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1">
-                            <Label Content="_Статус" Target="{Binding ElementName=StatusFilter}" Padding="0,0,0,5"/>
-                            <ComboBox x:Name="StatusFilter" ItemsSource="{Binding Statuses}" SelectedItem="{Binding SelectedStatus}" Padding="8"/>
-                        </StackPanel>
-                    </Grid>
-                    <DockPanel Grid.Row="2" Margin="0,0,0,12">
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding ResultSummary}" Foreground="#58736D" VerticalAlignment="Center"/>
-                        <WrapPanel>
-                            <Button Content="Добавить" Click="AddVehicle_Click" IsEnabled="{Binding CanAdd}"
-                                    Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}" Margin="0,0,8,0"/>
-                            <Button Content="Открыть карточку" Click="OpenVehicle_Click" IsEnabled="{Binding CanOpenCard}" Margin="0,0,8,0"/>
-                            <Button Content="Удалить" Click="DeleteVehicle_Click" IsEnabled="{Binding CanEditSelection}"
-                                    Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}"
-                                    Background="#FCEBE9" Foreground="#B42318" Margin="0"/>
-                        </WrapPanel>
-                    </DockPanel>
-                    <ListView Grid.Row="3" ItemsSource="{Binding Vehicles}" SelectedItem="{Binding SelectedVehicle}" BorderThickness="0"
-                              ItemContainerStyle="{StaticResource FleetCardStyle}"
-                              Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                              AutomationProperties.Name="Транспортные средства">
+        <DockPanel Grid.Row="1" Margin="0,0,0,8">
+            <Label Content="_Раздел" Target="{Binding ElementName=SectionNavigation}" VerticalAlignment="Center" Padding="0,0,10,0"/>
+            <ComboBox x:Name="SectionNavigation" ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage}"
+                      DisplayMemberPath="Title" Padding="8,4" MinWidth="260" MaxWidth="420"
+                      HorizontalAlignment="Left" IsEnabled="{Binding Fleet.IsIdle}"/>
+        </DockPanel>
+        <Border Grid.Row="2" Background="White" BorderBrush="#D8E6E0" BorderThickness="1" CornerRadius="10" Padding="12,8">
+            <Grid>
+                <Grid Visibility="{Binding IsVehicles, Converter={StaticResource BoolVisibility}}">
+                    <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Grid DataContext="{Binding Fleet}">
+                        <Grid Margin="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <DockPanel Margin="0,0,0,6">
+                                <Button DockPanel.Dock="Right" Content="Обновить" Command="{Binding RefreshCommand}" IsEnabled="{Binding IsIdle}"/>
+                                <TextBlock Text="Транспортные средства" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <Grid Grid.Row="1" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="210"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,16,0">
+                                    <Label Content="_Поиск по госномеру, марке или модели" Target="{Binding ElementName=SearchBox}" Padding="0,0,0,2"/>
+                                    <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="8,4"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <Label Content="_Статус" Target="{Binding ElementName=StatusFilter}" Padding="0,0,0,2"/>
+                                    <ComboBox x:Name="StatusFilter" ItemsSource="{Binding Statuses}" SelectedItem="{Binding SelectedStatus}" Padding="8,4"/>
+                                </StackPanel>
+                            </Grid>
+                            <DockPanel Grid.Row="2" Margin="0,0,0,6">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding ResultSummary}" Foreground="#58736D" VerticalAlignment="Center"/>
+                                <WrapPanel>
+                                    <Button Content="Добавить" Click="AddVehicle_Click" IsEnabled="{Binding CanAdd}"
+                                            Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}" Margin="0,0,8,0"/>
+                                    <Button Content="Открыть карточку" Click="OpenVehicle_Click" IsEnabled="{Binding CanOpenCard}" Margin="0,0,8,0"/>
+                                    <Button Content="Удалить" Click="DeleteVehicle_Click" IsEnabled="{Binding CanEditSelection}"
+                                            Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}"
+                                            Background="#FCEBE9" Foreground="#B42318" Margin="0"/>
+                                </WrapPanel>
+                            </DockPanel>
+                            <ListView Grid.Row="3" ItemsSource="{Binding Vehicles}" SelectedItem="{Binding SelectedVehicle}" BorderThickness="0"
+                                      ItemContainerStyle="{StaticResource FleetCardStyle}"
+                                      Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                      AutomationProperties.Name="Транспортные средства">
 
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="160"/>
-                                        <ColumnDefinition Width="170"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Margin="0,0,12,0">
-                                        <TextBlock FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
-                                            <Run Text="{Binding Brand}"/><Run Text=" "/><Run Text="{Binding Model}"/>
-                                        </TextBlock>
-                                        <TextBlock Text="{Binding LicensePlate}" Foreground="#4D6B65" Margin="0,6,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Mileage, StringFormat={}{0:N0} км}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding YearOfManufacture, StringFormat={}Год выпуска: {0}}"
-                                                   Foreground="#58736D" FontSize="12" Margin="0,6,0,0"/>
-                                    </StackPanel>
-                                    <Border Grid.Column="2" CornerRadius="8" Padding="10,7" VerticalAlignment="Center">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#EBF0ED"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Status}" Value="В эксплуатации">
-                                                        <Setter Property="Background" Value="#DCF4E7"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Status}" Value="В ремонте">
-                                                        <Setter Property="Background" Value="#FFF0CB"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold"/>
-                                    </Border>
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="160"/>
+                                                <ColumnDefinition Width="170"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Margin="0,0,12,0">
+                                                <TextBlock FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                                    <Run Text="{Binding Brand}"/><Run Text=" "/><Run Text="{Binding Model}"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding LicensePlate}" Foreground="#4D6B65" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Mileage, StringFormat={}{0:N0} км}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding YearOfManufacture, StringFormat={}Год выпуска: {0}}"
+                                                           Foreground="#58736D" FontSize="12" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="2" CornerRadius="8" Padding="8,4" VerticalAlignment="Center">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#EBF0ED"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="В эксплуатации">
+                                                                <Setter Property="Background" Value="#DCF4E7"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="В ремонте">
+                                                                <Setter Property="Background" Value="#FFF0CB"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold"/>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Margin="0,6,0,0">
+                        <ProgressBar Height="2" IsIndeterminate="{Binding Fleet.IsBusy}" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding Fleet.Status}" TextWrapping="Wrap" Foreground="#49665F" FontSize="12"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
                 </Grid>
-            </TabItem>
-            <TabItem Header="Реестры">
-                <views:CatalogView x:Name="CatalogPanel"/>
-            </TabItem>
-            <TabItem Header="Подключение" Visibility="{Binding CanManageSettings, Converter={StaticResource BoolVisibility}}">
-                <StackPanel Margin="20" MaxWidth="650" HorizontalAlignment="Left">
-                    <TextBlock Text="Подключение к базе данных" FontSize="22" FontWeight="SemiBold"/>
-                    <TextBlock Margin="0,16" TextWrapping="Wrap" Text="Укажите строку подключения в переменной FLEET_CONNECTION_STRING или в файле %LOCALAPPDATA%\FleetManagement\connection.txt и нажмите «Обновить». Подробная инструкция находится в README проекта."/>
-                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
-                    <Button Content="Обновить" Command="{Binding RefreshCommand}" IsEnabled="{Binding IsIdle}" HorizontalAlignment="Left" Margin="0,20,0,0"/>
+                <views:CatalogView x:Name="CatalogPanel" DataContext="{Binding Catalog}"
+                    Visibility="{Binding DataContext.IsCatalog, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibility}}"/>
+                <StackPanel Visibility="{Binding IsConnection, Converter={StaticResource BoolVisibility}}"
+                            MaxWidth="650" HorizontalAlignment="Left" Margin="4">
+                    <TextBlock Text="Подключение к базе данных" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Margin="0,12" TextWrapping="Wrap" Text="Укажите строку подключения в переменной FLEET_CONNECTION_STRING или в файле %LOCALAPPDATA%\FleetManagement\connection.txt и нажмите «Обновить». Подробная инструкция находится в README проекта."/>
+                    <TextBlock Text="{Binding Fleet.Status}" TextWrapping="Wrap"/>
+                    <Button Content="Обновить" Command="{Binding Fleet.RefreshCommand}" IsEnabled="{Binding Fleet.IsIdle}"
+                            HorizontalAlignment="Left" Margin="0,12,0,0"/>
                 </StackPanel>
-            </TabItem>
-        </TabControl>
-        <StackPanel Grid.Row="2" Margin="0,18,0,0">
-            <StackPanel.Style>
-                <Style TargetType="StackPanel">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="1">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </StackPanel.Style>
-            <ProgressBar Height="3" IsIndeterminate="{Binding IsBusy}" Margin="0,0,0,10"/>
-            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Foreground="#49665F"
-                       AutomationProperties.LiveSetting="Polite"/>
-        </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

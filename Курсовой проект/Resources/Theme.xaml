@@ -47,12 +47,12 @@
     <Style x:Key="FleetCardStyle" TargetType="ListViewItem">
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="Margin" Value="0,0,0,10"/>
+        <Setter Property="Margin" Value="0,0,0,5"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListViewItem">
-                    <Border x:Name="Card" Background="#F6FAF8" CornerRadius="12"
-                            BorderBrush="#D8E6E0" BorderThickness="1" Padding="18">
+                    <Border x:Name="Card" Background="#F6FAF8" CornerRadius="8"
+                            BorderBrush="#D8E6E0" BorderThickness="1" Padding="12,7">
                         <ContentPresenter/>
                     </Border>
                     <ControlTemplate.Triggers>

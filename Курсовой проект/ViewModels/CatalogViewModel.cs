@@ -9,6 +9,8 @@ namespace Курсовой_проект.ViewModels;
 public sealed class CatalogViewModel : INotifyPropertyChanged
 {
     private readonly ICatalogService service;
+    private readonly AccessService access;
+    private CatalogRow? selectedRow;
     private List<CatalogRow> allRows = new();
     private CatalogDefinition? selected;
     private string search = "", status = "Выберите раздел для просмотра.";
@@ -17,6 +19,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     public CatalogViewModel(ICatalogService service, AccessService access)
     {
         this.service = service;
+        this.access = access;
         Sections = CatalogDefinition.All.Where(x => access.Can(x.Permission)).ToList();
         selected = Sections.FirstOrDefault();
         RefreshCommand = new AsyncCommand(LoadAsync);
@@ -32,14 +35,30 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             if (selected == value) return;
             selected = value;
             search = "";
-            Changed(); Changed(nameof(Title)); Changed(nameof(Search));
+            Changed(); Changed(nameof(Title)); Changed(nameof(Search)); Changed(nameof(ShowEditPlaceholder));
             _ = LoadAsync();
         }
     }
     public string Title => SelectedSection?.Title ?? "Реестры";
+    public CatalogRow? SelectedRow
+    {
+        get => selectedRow;
+        set { selectedRow = value; Changed(); Changed(nameof(CanOpenRecord)); }
+    }
+    public bool CanOpenRecord => !IsBusy && SelectedRow != null;
+    // Место будущей команды; права сохранения будут проверяться в соответствующем сервисе.
+    public bool ShowEditPlaceholder => SelectedSection?.Section switch
+    {
+        CatalogSection.Drivers or CatalogSection.Assignments => access.Can(Permission.ManageDrivers),
+        CatalogSection.Documents => access.Can(Permission.ManageDocuments),
+        CatalogSection.Maintenance or CatalogSection.WorkParts => access.Can(Permission.ManageMaintenance),
+        CatalogSection.Parts => access.Can(Permission.ManageParts),
+        CatalogSection.Users or CatalogSection.Roles => access.Can(Permission.ManageUsers),
+        _ => false
+    };
     public string Search { get => search; set { search = value; Changed(); Filter(); } }
     public string Status { get => status; private set { status = value; Changed(); } }
-    public bool IsBusy { get => busy; private set { busy = value; Changed(); Changed(nameof(CanRefresh)); } }
+    public bool IsBusy { get => busy; private set { busy = value; Changed(); Changed(nameof(CanRefresh)); Changed(nameof(CanOpenRecord)); } }
     public bool CanRefresh => !IsBusy && SelectedSection != null;
     public string CountText => $"Показано: {Rows.Count} из {allRows.Count}";
     public bool HasLoaded { get; private set; }
@@ -48,7 +67,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     {
         var current = ++request;
         var section = SelectedSection;
-        allRows = new List<CatalogRow>(); Rows.Clear(); Changed(nameof(CountText));
+        allRows = new List<CatalogRow>(); Rows.Clear(); SelectedRow = null; Changed(nameof(CountText));
         if (section == null) { IsBusy = false; Status = "Нет доступных разделов."; return; }
         IsBusy = true;
         Status = "Загрузка данных…";
@@ -77,6 +96,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
     private void Filter()
     {
         Rows.Clear();
+        SelectedRow = null;
         var query = Search.Trim();
         foreach (var row in allRows.Where(x => query.Length == 0 ||
             string.Join(" ", x.Title, x.Subtitle, x.Details, x.Badge).Contains(query, StringComparison.CurrentCultureIgnoreCase)))
