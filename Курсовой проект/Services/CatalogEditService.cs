@@ -204,7 +204,8 @@ public sealed class CatalogEditService : ICatalogEditService
         CatalogSection.Drivers => ((Driver)entity).DriverId, CatalogSection.Assignments => ((VehicleAssignment)entity).AssignmentId,
         CatalogSection.Documents => ((Document)entity).DocumentId, CatalogSection.Maintenance => ((MaintenanceRepair)entity).WorkId,
         CatalogSection.Parts => ((Part)entity).PartId, CatalogSection.WorkParts => ((WorkPart)entity).CompositionId,
-        CatalogSection.Users => ((User)entity).UserId, _ => throw new UnauthorizedAccessException()
+        CatalogSection.Users => ((User)entity).UserId, CatalogSection.Roles => ((Role)entity).RoleId,
+        _ => throw new UnauthorizedAccessException()
     };
 
     private async Task<string?> ValidateAsync(OzvsKursachContext db, object entity)
