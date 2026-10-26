@@ -59,6 +59,37 @@ public class CatalogEditTests : IDisposable
     }
 
     [Fact]
+    public async Task FleetReportUsesCurrentAssignmentsCountsVehiclesAndChecksActualRole()
+    {
+        await using var db = new OzvsKursachContext(options);
+        var assignment = await db.VehicleAssignments.FindAsync(20);
+        assignment!.StartDate = DateOnly.FromDateTime(DateTime.Today);
+        assignment.EndDate = assignment.StartDate;
+        db.Vehicles.Add(new Vehicle { VehicleId = 11, LicensePlate = "TEST-2", Brand = "Kia", Model = "Rio",
+            YearOfManufacture = 2020, Mileage = 5000, Status = "В ремонте", VinNumber = "SECOND" });
+        await db.SaveChangesAsync();
+        var reports = new FleetReportService(access, session, () => new OzvsKursachContext(options));
+        var report = await reports.GenerateAsync();
+        Assert.Equal(2, report.Rows.Count);
+        Assert.Contains("Тестов Олег", report.Rows.Single(x => x.Plate != "TEST-2").Drivers);
+        Assert.Equal("Не закреплён", report.Rows.Single(x => x.Plate == "TEST-2").Drivers);
+        Assert.Contains("В ремонте: 1", report.Summary);
+        Assert.Single((await reports.GenerateAsync("В ремонте")).Rows);
+        assignment.EndDate = assignment.StartDate.AddDays(-1);
+        assignment.StartDate = assignment.StartDate.AddDays(-5);
+        await db.SaveChangesAsync();
+        Assert.All((await reports.GenerateAsync()).Rows, row => Assert.Equal("Не закреплён", row.Drivers));
+        var exported = FleetReportService.Csv(new FleetReport(DateTime.Now, null,
+            [new("=1+1", "Kia", "Rio", 2020, 100, "В ремонте", "Имя; Фамилия")]));
+        Assert.Contains("\"'=1+1\"", exported);
+        Assert.Contains("\"Имя; Фамилия\"", exported);
+        var actor = await db.Users.FindAsync(1);
+        actor!.RoleId = 4;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => reports.GenerateAsync());
+    }
+
+    [Fact]
     public async Task PasswordResetRequiresAdministratorAndNeverLogsSecrets()
     {
         const string password = "NewPassword!2026";

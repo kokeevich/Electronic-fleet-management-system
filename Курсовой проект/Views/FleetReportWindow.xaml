@@ -1,0 +1,35 @@
+<Window x:Class="Курсовой_проект.Views.FleetReportWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Состояние автопарка" Width="1000" Height="700" MinWidth="760" MinHeight="480" WindowStartupLocation="CenterOwner">
+ <Grid Margin="16">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <StackPanel>
+   <TextBlock Text="Состояние автопарка" FontSize="24" FontWeight="SemiBold"/>
+   <WrapPanel x:Name="Filters" Margin="0,12">
+    <StackPanel Margin="0,0,12,0"><TextBlock Text="Статус автомобиля"/><ComboBox x:Name="StatusFilter" Width="280" DisplayMemberPath="Label"/></StackPanel>
+    <Button Content="Сформировать" Click="Generate" VerticalAlignment="Bottom"/>
+   </WrapPanel>
+  </StackPanel>
+  <StackPanel Grid.Row="1" Margin="0,0,0,8">
+   <TextBlock x:Name="Summary" TextWrapping="Wrap" FontSize="18" FontWeight="SemiBold"/>
+   <TextBlock x:Name="Parameters" TextWrapping="Wrap"/>
+   <TextBlock Text="Показаны текущие статусы и пробег. Водители определяются по закреплениям на сегодняшний день." Foreground="#58736D" TextWrapping="Wrap"/>
+  </StackPanel>
+  <ListView Grid.Row="2" x:Name="Rows" ItemContainerStyle="{StaticResource FleetCardStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+   <ListView.ItemTemplate><DataTemplate><StackPanel>
+    <TextBlock Text="{Binding Vehicle}" FontWeight="SemiBold" FontSize="16"/>
+    <TextBlock Text="{Binding Status}" FontWeight="SemiBold" Foreground="#0F766E"/>
+    <WrapPanel><TextBlock Text="{Binding Year, StringFormat=Год выпуска: {0}}" Margin="0,0,16,0"/><TextBlock Text="{Binding Mileage, StringFormat=Пробег: {0} км}"/></WrapPanel>
+    <TextBlock Text="{Binding Drivers}" TextWrapping="Wrap" Foreground="#58736D"/>
+   </StackPanel></DataTemplate></ListView.ItemTemplate>
+  </ListView>
+  <DockPanel Grid.Row="3" Margin="0,10,0,0">
+   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" x:Name="Exports" IsEnabled="False">
+    <Button Content="Сохранить CSV для Excel" Click="Export" Margin="8,0"/>
+    <Button Content="Печать / PDF" Click="Print"/>
+   </StackPanel>
+   <TextBlock x:Name="Status" TextWrapping="Wrap" VerticalAlignment="Center"/>
+  </DockPanel>
+ </Grid>
+</Window>

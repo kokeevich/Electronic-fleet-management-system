@@ -15,6 +15,7 @@ public partial class App : Application
         var collection = new ServiceCollection();
         collection.AddSingleton<UserSession>();
         collection.AddSingleton<MaintenanceReportService>();
+        collection.AddSingleton<FleetReportService>();
         collection.AddSingleton<AccessService>();
         collection.AddSingleton<IUserStore, UserStore>();
         collection.AddSingleton<IAuthenticationService, AuthenticationService>();

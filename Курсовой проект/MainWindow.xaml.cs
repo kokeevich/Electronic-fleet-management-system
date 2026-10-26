@@ -6,20 +6,39 @@ namespace Курсовой_проект;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel;
+    private readonly Курсовой_проект.Services.FleetReportService fleetReports;
     private readonly Курсовой_проект.Services.MaintenanceReportService reports;
     public event EventHandler? LogoutRequested;
-    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog, Курсовой_проект.Services.MaintenanceReportService reports)
+    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog, Курсовой_проект.Services.MaintenanceReportService reports, Курсовой_проект.Services.FleetReportService fleetReports)
     {
         InitializeComponent();
         this.viewModel = viewModel;
         this.reports = reports;
+        this.fleetReports = fleetReports;
         ReportsButton.Visibility = reports.CanRead ? Visibility.Visible : Visibility.Collapsed;
         DataContext = new WorkspaceViewModel(viewModel, catalog);
         Loaded += WindowLoaded;
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
     }
 
-    private void Reports_Click(object sender, RoutedEventArgs e) => new Views.ReportWindow(reports) { Owner = this }.ShowDialog();
+    private void Reports_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = new System.Windows.Controls.ContextMenu();
+        if (fleetReports.CanRead)
+        {
+            var fleet = new System.Windows.Controls.MenuItem { Header = "Состояние автопарка" };
+            fleet.Click += (_, _) => new Views.FleetReportWindow(fleetReports) { Owner = this }.ShowDialog();
+            menu.Items.Add(fleet);
+        }
+        if (reports.CanRead)
+        {
+            var maintenance = new System.Windows.Controls.MenuItem { Header = "Обслуживание и расходы" };
+            maintenance.Click += (_, _) => new Views.ReportWindow(reports) { Owner = this }.ShowDialog();
+            menu.Items.Add(maintenance);
+        }
+        menu.PlacementTarget = ReportsButton;
+        menu.IsOpen = true;
+    }
 
     private async void WindowLoaded(object sender, RoutedEventArgs e)
     {
