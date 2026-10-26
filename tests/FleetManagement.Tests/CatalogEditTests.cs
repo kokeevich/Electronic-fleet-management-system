@@ -59,6 +59,35 @@ public class CatalogEditTests : IDisposable
     }
 
     [Fact]
+    public async Task VehicleHistoryContainsOnlySelectedCarAndRejectsRevokedSession()
+    {
+        await using var db = new OzvsKursachContext(options);
+        db.Vehicles.Add(new Vehicle { VehicleId = 11, LicensePlate = "OTHER", Brand = "Kia", Model = "Rio",
+            YearOfManufacture = 2020, Status = "В ремонте", VinNumber = "OTHER-VIN" });
+        db.MaintenanceRepairs.Add(new MaintenanceRepair { VehicleId = 11, WorkDate = new(2026, 1, 1),
+            WorkType = "OTHER-WORK", Cost = 9999, Mileage = 20 });
+        await db.SaveChangesAsync();
+        var service = new VehicleHistoryService(access, session, () => new OzvsKursachContext(options));
+        var history = await service.LoadAsync(10);
+        Assert.Single(history.Assignments);
+        Assert.Single(history.Documents);
+        Assert.Single(history.Maintenance);
+        Assert.Contains("Фильтр", history.Maintenance[0].Details);
+        Assert.DoesNotContain("OTHER-WORK", history.Maintenance[0].Title);
+        var empty = await service.LoadAsync(11);
+        Assert.Empty(empty.Assignments);
+        Assert.Empty(empty.Documents);
+        Assert.Single(empty.Maintenance);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.LoadAsync(999));
+        session.SignIn(new SessionUser(4, "Наблюдатель", "Наблюдатель"));
+        Assert.Single((await service.LoadAsync(10)).Maintenance);
+        var user = await db.Users.FindAsync(4);
+        user!.RoleId = 3;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync(10));
+    }
+
+    [Fact]
     public async Task FleetReportUsesCurrentAssignmentsCountsVehiclesAndChecksActualRole()
     {
         await using var db = new OzvsKursachContext(options);

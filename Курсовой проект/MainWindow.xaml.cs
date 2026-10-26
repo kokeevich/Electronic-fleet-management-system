@@ -6,19 +6,27 @@ namespace Курсовой_проект;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel;
+    private readonly Курсовой_проект.Services.VehicleHistoryService history;
     private readonly Курсовой_проект.Services.FleetReportService fleetReports;
     private readonly Курсовой_проект.Services.MaintenanceReportService reports;
     public event EventHandler? LogoutRequested;
-    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog, Курсовой_проект.Services.MaintenanceReportService reports, Курсовой_проект.Services.FleetReportService fleetReports)
+    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog, Курсовой_проект.Services.MaintenanceReportService reports, Курсовой_проект.Services.FleetReportService fleetReports, Курсовой_проект.Services.VehicleHistoryService history)
     {
         InitializeComponent();
         this.viewModel = viewModel;
+        this.history = history;
         this.reports = reports;
         this.fleetReports = fleetReports;
         ReportsButton.Visibility = reports.CanRead ? Visibility.Visible : Visibility.Collapsed;
         DataContext = new WorkspaceViewModel(viewModel, catalog);
         Loaded += WindowLoaded;
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
+    }
+
+    private void VehicleHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (viewModel.CanOpenCard && viewModel.SelectedVehicle is { } car)
+            new Views.VehicleHistoryWindow(history, car.VehicleId) { Owner = this }.ShowDialog();
     }
 
     private void Reports_Click(object sender, RoutedEventArgs e)

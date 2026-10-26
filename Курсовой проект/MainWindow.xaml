@@ -62,6 +62,7 @@
                             <DockPanel Grid.Row="2" Margin="0,0,0,6">
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding ResultSummary}" Foreground="#58736D" VerticalAlignment="Center"/>
                                 <WrapPanel>
+                                    <Button Content="История автомобиля" Click="VehicleHistory_Click" IsEnabled="{Binding CanOpenCard}" Margin="0,0,8,0"/>
                                     <Button Content="Добавить" Click="AddVehicle_Click" IsEnabled="{Binding CanAdd}"
                                             Visibility="{Binding CanManageVehicles, Converter={StaticResource BoolVisibility}}" Margin="0,0,8,0"/>
                                     <Button Content="Изменить" Click="OpenVehicle_Click" IsEnabled="{Binding CanEditSelection}" Margin="0,0,8,0"
