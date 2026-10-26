@@ -6,15 +6,20 @@ namespace Курсовой_проект;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel;
+    private readonly Курсовой_проект.Services.MaintenanceReportService reports;
     public event EventHandler? LogoutRequested;
-    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog)
+    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog, Курсовой_проект.Services.MaintenanceReportService reports)
     {
         InitializeComponent();
         this.viewModel = viewModel;
+        this.reports = reports;
+        ReportsButton.Visibility = reports.CanRead ? Visibility.Visible : Visibility.Collapsed;
         DataContext = new WorkspaceViewModel(viewModel, catalog);
         Loaded += WindowLoaded;
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
     }
+
+    private void Reports_Click(object sender, RoutedEventArgs e) => new Views.ReportWindow(reports) { Owner = this }.ShowDialog();
 
     private async void WindowLoaded(object sender, RoutedEventArgs e)
     {
