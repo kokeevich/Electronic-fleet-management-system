@@ -40,7 +40,7 @@ public class WorkspaceTests
     {
         var (workspace, service) = Create("Администратор");
         Assert.True(workspace.IsVehicles);
-        Assert.Equal(10, workspace.Pages.Count); // транспорт, восемь таблиц, подключение
+        Assert.Equal(11, workspace.Pages.Count); // транспорт, восемь таблиц, журнал, подключение
         workspace.SelectedPage = workspace.Pages.Single(x => x.Definition?.Section == CatalogSection.Documents);
         Assert.True(workspace.IsCatalog);
         Assert.False(workspace.IsVehicles);

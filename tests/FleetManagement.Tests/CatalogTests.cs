@@ -32,6 +32,9 @@ public class CatalogTests : IDisposable
         var work = new MaintenanceRepair { Vehicle = car, WorkDate = new(2026, 1, 1), WorkType = "Замена масла", Cost = 1200, Mileage = 9000 };
         var part = new Part { Name = "Фильтр", ArticleNumber = "F-1", Quantity = 10, Cost = 250 };
         db.Users.AddRange(user, other);
+        db.AuditLogs.Add(new AuditLog { ActorUserId = 1, ActorName = "Тест",
+            ChangedAt = new DateTime(2026, 1, 1), Action = "Создание", EntityName = "Транспорт",
+            EntityId = 1, AfterData = "{\"Госномер\":\"А123БВ196\"}" });
         db.VehicleAssignments.Add(new VehicleAssignment { Vehicle = car, Driver = driver, StartDate = new(2025, 1, 1) });
         db.Documents.Add(new Document { Vehicle = car, Driver = driver, DocumentType = "ОСАГО", DocumentNumber = "DOC-1", IssueDate = new(2026, 1, 1) });
         db.WorkParts.Add(new WorkPart { Work = work, Part = part, Quantity = 2 });

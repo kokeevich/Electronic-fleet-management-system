@@ -1,6 +1,7 @@
 -- Reference from supplied script. Do not run against an existing database.
 -- After creating a fresh database, run database-demo.sql for hashed test accounts.
--- For an existing database run ONLY database-demo.sql; do not recreate the schema.
+-- Also apply audit-log.sql and notification-reads.sql to the selected database.
+-- For an existing database do not recreate the schema; see README.md.
 CREATE DATABASE ozvs_kursach;
 GO
 
