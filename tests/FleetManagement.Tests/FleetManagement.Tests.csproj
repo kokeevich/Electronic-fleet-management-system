@@ -15,6 +15,7 @@
   </ItemGroup>
   <!-- Проверяем тот же исходный код без зависимости от WindowsDesktop runtime. -->
   <ItemGroup>
+    <None Include="../../docs/database-install.sql" Link="database-install.sql" CopyToOutputDirectory="PreserveNewest"/>
     <None Include="../../docs/database-demo.sql" Link="database-demo.sql" CopyToOutputDirectory="PreserveNewest"/>
     <Compile Include="../../tools/PasswordMigration/MigrationPlan.cs" Link="MigrationPlan.cs"/>
     <Compile Include="../../Курсовой проект/Models/*.cs" Link="Models/%(Filename)%(Extension)"/>
