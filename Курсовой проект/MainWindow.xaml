@@ -178,14 +178,6 @@
                 </Grid>
                 <views:CatalogView x:Name="CatalogPanel" DataContext="{Binding Catalog}"
                     Visibility="{Binding DataContext.IsCatalog, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibility}}"/>
-                <StackPanel Visibility="{Binding IsConnection, Converter={StaticResource BoolVisibility}}"
-                            MaxWidth="650" HorizontalAlignment="Left" Margin="4">
-                    <TextBlock Text="Подключение к базе данных" FontSize="18" FontWeight="SemiBold"/>
-                    <TextBlock Margin="0,12" TextWrapping="Wrap" Text="Укажите строку подключения в переменной FLEET_CONNECTION_STRING или в файле %LOCALAPPDATA%\FleetManagement\connection.txt и нажмите «Обновить». Подробная инструкция находится в README проекта."/>
-                    <TextBlock Text="{Binding Fleet.Status}" TextWrapping="Wrap"/>
-                    <Button Content="Обновить" Command="{Binding Fleet.RefreshCommand}" IsEnabled="{Binding Fleet.IsIdle}"
-                            HorizontalAlignment="Left" Margin="0,12,0,0"/>
-                </StackPanel>
             </Grid>
         </Border>
     </Grid>

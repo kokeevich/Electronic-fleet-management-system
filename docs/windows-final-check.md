@@ -8,7 +8,7 @@
 
 - Проверяющий:
 - Дата:
-- Ветка: release/final
+- Ветка: main
 - Commit (git rev-parse HEAD или ID коммита на GitHub):
 - Windows / масштаб экрана:
 - Версия SQL Server:

@@ -40,14 +40,13 @@ public class WorkspaceTests
     {
         var (workspace, service) = Create("Администратор");
         Assert.True(workspace.IsVehicles);
-        Assert.Equal(11, workspace.Pages.Count); // транспорт, восемь таблиц, журнал, подключение
+        Assert.Equal(10, workspace.Pages.Count); // транспорт, восемь таблиц, журнал
         workspace.SelectedPage = workspace.Pages.Single(x => x.Definition?.Section == CatalogSection.Documents);
         Assert.True(workspace.IsCatalog);
         Assert.False(workspace.IsVehicles);
         Assert.Equal(CatalogSection.Documents, Assert.Single(service.Requests));
         Assert.Equal("Documents", Assert.Single(workspace.Catalog.Rows).Title);
-        workspace.SelectedPage = workspace.Pages.Single(x => x.Kind == WorkspacePageKind.Connection);
-        Assert.True(workspace.IsConnection);
+        Assert.DoesNotContain(workspace.Pages, x => x.Title == "Подключение");
         workspace.SelectedPage = workspace.Pages[0];
         Assert.True(workspace.IsVehicles);
         Assert.False(workspace.IsCatalog);
@@ -58,12 +57,11 @@ public class WorkspaceTests
     public void NavigationAndFutureEditPlacesRespectRole()
     {
         var (observer, _) = Create("Наблюдатель");
-        Assert.DoesNotContain(observer.Pages, x => x.Kind == WorkspacePageKind.Connection ||
-            x.Definition?.Section is CatalogSection.Users or CatalogSection.Roles or CatalogSection.Notifications);
+        Assert.DoesNotContain(observer.Pages, x => x.Definition?.Section is CatalogSection.Users or CatalogSection.Roles or CatalogSection.Notifications);
         observer.SelectedPage = observer.Pages.Single(x => x.Definition?.Section == CatalogSection.Drivers);
         Assert.False(observer.Catalog.CanManageSection);
         var before = observer.SelectedPage;
-        observer.SelectedPage = new WorkspacePage("Подключение", WorkspacePageKind.Connection);
+        observer.SelectedPage = new WorkspacePage("Недоступная страница", WorkspacePageKind.Catalog);
         Assert.Equal(before, observer.SelectedPage);
 
         var (mechanic, _) = Create("Механик");
