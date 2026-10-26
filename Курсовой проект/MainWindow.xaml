@@ -9,6 +9,38 @@
             <Setter Property="Padding" Value="12,5"/>
             <Setter Property="Margin" Value="0"/>
         </Style>
+        <Style x:Key="NotificationButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#E3F3EF"/>
+            <Setter Property="Foreground" Value="#0F766E"/>
+            <Setter Property="BorderBrush" Value="#C7E5DD"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Surface" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="14">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#CDEBE3"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="#70B7A6"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="#0F766E"/>
+                                <Setter TargetName="Surface" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Surface" Property="Background" Value="#B4DFD3"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Surface" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid Margin="16,10">
         <Grid.RowDefinitions>
@@ -18,12 +50,21 @@
         </Grid.RowDefinitions>
         <DockPanel Margin="0,0,0,8">
             <Button x:Name="NotificationsButton" DockPanel.Dock="Right" Click="Notifications_Click"
-                    ToolTip="Уведомления" AutomationProperties.Name="Уведомления" Margin="8,0" Padding="8" VerticalAlignment="Center">
-                <Grid Width="42" Height="30">
-                    <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="25" VerticalAlignment="Center"/>
-                    <Border x:Name="NotificationBadge" Background="#B42318" CornerRadius="10" MinWidth="20" Height="20"
+                    Style="{StaticResource NotificationButtonStyle}" Width="52" Height="46"
+                    ToolTip="Уведомления" AutomationProperties.Name="Уведомления" Margin="8,0" VerticalAlignment="Center">
+                <Grid Width="50" Height="44">
+                    <Viewbox Width="26" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="M 18 8 C 18 4.7 15.3 2 12 2 C 8.7 2 6 4.7 6 8 C 6 15 3 15 3 17 L 21 17 C 21 15 18 15 18 8 M 10 21 C 10.6 22.3 13.4 22.3 14 21"
+                                  Stroke="#0F766E" StrokeThickness="1.8" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                        </Canvas>
+                    </Viewbox>
+                    <Border x:Name="NotificationBadge" Background="#D64545" BorderBrush="#F5FAF8" BorderThickness="2"
+                            CornerRadius="11" MinWidth="22" Height="22" Margin="0,-3,-3,0"
                             HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
-                        <TextBlock x:Name="NotificationCount" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0"/>
+                        <TextBlock x:Name="NotificationCount" Foreground="White" FontSize="10" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0"/>
                     </Border>
                 </Grid>
             </Button>
