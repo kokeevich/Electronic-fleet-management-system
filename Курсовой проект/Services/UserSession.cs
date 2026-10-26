@@ -18,7 +18,7 @@ public enum Permission
 {
     ViewVehicles, ManageVehicles, ViewDrivers, ManageDrivers, ViewDocuments,
     ManageDocuments, ViewMaintenance, ManageMaintenance, ViewParts, ManageParts,
-    ViewNotifications, FleetReports, MaintenanceReports, ManageUsers, ManageSettings
+    ViewNotifications, FleetReports, MaintenanceReports, ManageUsers, ManageSettings, ViewAuditLog
 }
 
 public sealed class AccessService(UserSession session)
@@ -35,13 +35,13 @@ public sealed class AccessService(UserSession session)
             "Диспетчер" => permission is Permission.ViewVehicles or Permission.ManageVehicles
                 or Permission.ViewDrivers or Permission.ManageDrivers or Permission.ViewDocuments
                 or Permission.ManageDocuments or Permission.ViewMaintenance or Permission.ViewParts
-                or Permission.ViewNotifications or Permission.FleetReports,
+                or Permission.ViewNotifications or Permission.FleetReports or Permission.ViewAuditLog,
             "Механик" => permission is Permission.ViewVehicles or Permission.ViewDrivers
                 or Permission.ViewDocuments or Permission.ViewMaintenance or Permission.ManageMaintenance
                 or Permission.ViewParts or Permission.ManageParts or Permission.ViewNotifications
-                or Permission.MaintenanceReports,
+                or Permission.MaintenanceReports or Permission.ViewAuditLog,
             "Наблюдатель" => permission is Permission.ViewVehicles or Permission.ViewDrivers
-                or Permission.ViewDocuments or Permission.ViewMaintenance or Permission.ViewParts,
+                or Permission.ViewDocuments or Permission.ViewMaintenance or Permission.ViewParts or Permission.ViewAuditLog,
             _ => false
         };
     }

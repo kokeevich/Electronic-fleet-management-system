@@ -13,14 +13,25 @@ public interface IVehicleStore
 public sealed class VehicleStore : IVehicleStore
 {
     private readonly Func<OzvsKursachContext> createContext;
-    public VehicleStore() => createContext = DatabaseFactory.Create;
-    internal VehicleStore(Func<OzvsKursachContext> createContext) => this.createContext = createContext;
+    private readonly UserSession? session;
+    public VehicleStore(AccessService access, UserSession session) { this.session = session; createContext = DatabaseFactory.Create; }
+    internal VehicleStore() => createContext = DatabaseFactory.Create;
+    internal VehicleStore(Func<OzvsKursachContext> createContext) { this.createContext = createContext; }
+    internal VehicleStore(Func<OzvsKursachContext> createContext, UserSession session) { this.createContext = createContext; this.session = session; }
     private static VehicleResult Conflict() => new(false,
         "Запись уже изменена или удалена другим пользователем. Обновите список и откройте карточку заново.");
 
     public async Task<VehicleResult> SaveAsync(VehicleData? original, VehicleData edited)
     {
         await using var database = createContext();
+        var actor = session?.Current;
+        if (session != null && actor == null) throw new UnauthorizedAccessException();
+        await using var transaction = await database.Database.BeginTransactionAsync();
+        if (actor != null)
+        {
+            var role = await database.Users.Where(x => x.UserId == actor.UserId).Select(x => x.Role.Name).SingleOrDefaultAsync();
+            if (role != actor.Role || role is not ("Администратор" or "Диспетчер")) throw new UnauthorizedAccessException();
+        }
         var vehicle = original == null ? new Vehicle() : await database.Vehicles.FindAsync(original.VehicleId);
         if (vehicle == null || original != null && VehicleData.From(vehicle) != original)
             return Conflict();
@@ -43,7 +54,15 @@ public sealed class VehicleStore : IVehicleStore
         if (original == null) database.Vehicles.Add(vehicle);
         try
         {
+            var before = original == null ? null : System.Text.Json.JsonSerializer.Serialize(original);
             await database.SaveChangesAsync();
+            if (actor != null)
+            {
+                database.AuditLogs.Add(AuditSnapshot.Create(actor, original == null ? "Создание" : "Изменение", "Транспорт",
+                    vehicle.VehicleId, before, System.Text.Json.JsonSerializer.Serialize(VehicleData.From(vehicle))));
+                await database.SaveChangesAsync();
+            }
+            await transaction.CommitAsync();
             return new(true, original == null ? "Автомобиль добавлен." : "Изменения сохранены.");
         }
         catch (DbUpdateConcurrencyException) { return Conflict(); }
@@ -56,6 +75,14 @@ public sealed class VehicleStore : IVehicleStore
     public async Task<VehicleResult> DeleteAsync(VehicleData original)
     {
         await using var database = createContext();
+        var actor = session?.Current;
+        if (session != null && actor == null) throw new UnauthorizedAccessException();
+        await using var transaction = await database.Database.BeginTransactionAsync();
+        if (actor != null)
+        {
+            var role = await database.Users.Where(x => x.UserId == actor.UserId).Select(x => x.Role.Name).SingleOrDefaultAsync();
+            if (role != actor.Role || role is not ("Администратор" or "Диспетчер")) throw new UnauthorizedAccessException();
+        }
         var vehicle = await database.Vehicles.FindAsync(original.VehicleId);
         if (vehicle == null || VehicleData.From(vehicle) != original) return Conflict();
         if (await database.VehicleAssignments.AnyAsync(x => x.VehicleId == original.VehicleId) ||
@@ -66,7 +93,14 @@ public sealed class VehicleStore : IVehicleStore
         database.Vehicles.Remove(vehicle);
         try
         {
+            var before = System.Text.Json.JsonSerializer.Serialize(original);
             await database.SaveChangesAsync();
+            if (actor != null)
+            {
+                database.AuditLogs.Add(AuditSnapshot.Create(actor, "Удаление", "Транспорт", original.VehicleId, before, null));
+                await database.SaveChangesAsync();
+            }
+            await transaction.CommitAsync();
             return new(true, "Автомобиль удалён.");
         }
         catch (DbUpdateConcurrencyException) { return Conflict(); }

@@ -6,6 +6,7 @@ public sealed class EditField(EditSpec spec, string value, IReadOnlyList<EditOpt
 {
     public string Key => spec.Key;
     public string Label => spec.Label + (spec.Required ? " *" : "");
+    public bool IsReadOnly => spec.Key is "ActorUserId" or "ActorName" or "ChangedAt" or "Action" or "EntityName" or "EntityId" or "BeforeData" or "AfterData";
     public bool IsPassword => spec.Key is "Password" or "PasswordConfirmation";
     public bool IsChoice => spec.Choice != null;
     public bool IsMultiline => spec.Key == "Description";
@@ -66,6 +67,10 @@ public static class CatalogEditRules
             new("MiddleName", "Отчество", false,100), new("Login", "Логин", MaxLength:100),
             new("RoleId", "Роль", Choice:"Roles")],
         CatalogSection.Roles => [new("Description", "Описание роли", false,500)],
+        CatalogSection.AuditLog => [
+            new("ActorName", "Пользователь", true,250), new("ChangedAt", "Дата и время"),
+            new("Action", "Действие", true,20), new("EntityName", "Раздел", true,50),
+            new("EntityId", "ID записи"), new("BeforeData", "До", false,4000), new("AfterData", "После", false,4000)],
         _ => throw new UnauthorizedAccessException()
     };
 }

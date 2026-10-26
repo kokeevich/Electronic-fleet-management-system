@@ -17,6 +17,8 @@ public partial class OzvsKursachContext : DbContext
 
     public virtual DbSet<Document> Documents { get; set; }
 
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
+
     public virtual DbSet<Driver> Drivers { get; set; }
 
     public virtual DbSet<MaintenanceRepair> MaintenanceRepairs { get; set; }
@@ -43,6 +45,17 @@ public partial class OzvsKursachContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.AuditLogId);
+            entity.Property(e => e.ActorName).HasMaxLength(250).IsRequired();
+            entity.Property(e => e.Action).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.EntityName).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.BeforeData).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.AfterData).HasColumnType("nvarchar(max)");
+            entity.HasIndex(e => e.ChangedAt);
+            entity.HasIndex(e => new { e.ActorUserId, e.ChangedAt });
+        });
         modelBuilder.Entity<Document>(entity =>
         {
             entity.HasKey(e => e.DocumentId).HasName("PK__Document__1ABEEF0F23B11C7C");

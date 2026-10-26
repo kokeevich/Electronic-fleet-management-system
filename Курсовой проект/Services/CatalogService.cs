@@ -4,7 +4,7 @@ using Курсовой_проект.Models;
 
 namespace Курсовой_проект.Services;
 
-public enum CatalogSection { Drivers, Assignments, Documents, Maintenance, Parts, WorkParts, Notifications, Users, Roles }
+public enum CatalogSection { Drivers, Assignments, Documents, Maintenance, Parts, WorkParts, Notifications, Users, Roles, AuditLog }
 public sealed record CatalogDefinition(CatalogSection Section, string Title, Permission Permission)
 {
     public static IReadOnlyList<CatalogDefinition> All { get; } = new[]
@@ -16,7 +16,8 @@ public sealed record CatalogDefinition(CatalogSection Section, string Title, Per
         new CatalogDefinition(CatalogSection.Parts, "Запчасти", Permission.ViewParts),
         new CatalogDefinition(CatalogSection.WorkParts, "Состав работ", Permission.ViewParts),
         new CatalogDefinition(CatalogSection.Users, "Пользователи", Permission.ManageUsers),
-        new CatalogDefinition(CatalogSection.Roles, "Роли", Permission.ManageUsers)
+        new CatalogDefinition(CatalogSection.Roles, "Роли", Permission.ManageUsers),
+        new CatalogDefinition(CatalogSection.AuditLog, "История изменений", Permission.ViewAuditLog)
     };
 }
 
@@ -105,6 +106,14 @@ public sealed class CatalogService : ICatalogService
                 rows = (await db.Roles.AsNoTracking().OrderBy(x => x.Name)
                     .Select(x => new { x.RoleId, x.Name, x.Description, Count = x.Users.Count }).ToListAsync())
                     .Select(x => new CatalogRow(x.Name, Text(x.Description), $"Пользователей: {x.Count}", "Роль доступа", x.RoleId)).ToList();
+                break;
+            case CatalogSection.AuditLog:
+                var query = db.AuditLogs.AsNoTracking();
+                if (user.Role != "Администратор") query = query.Where(x => x.ActorUserId == user.UserId);
+                rows = (await query.OrderByDescending(x => x.ChangedAt).Take(1000).ToListAsync())
+                    .Select(x => new CatalogRow($"{x.Action}: {x.EntityName} · #{x.EntityId}",
+                        $"{x.ActorName} · {x.ChangedAt:dd.MM.yyyy HH:mm:ss}",
+                        $"До: {x.BeforeData ?? "—"}\nПосле: {x.AfterData ?? "—"}", x.Action, x.AuditLogId)).ToList();
                 break;
             default: throw new UnauthorizedAccessException();
         }

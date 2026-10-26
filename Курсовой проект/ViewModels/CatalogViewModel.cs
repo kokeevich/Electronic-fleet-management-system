@@ -89,6 +89,7 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
         CatalogSection.Maintenance or CatalogSection.WorkParts => access.Can(Permission.ManageMaintenance),
         CatalogSection.Parts => access.Can(Permission.ManageParts),
         CatalogSection.Users or CatalogSection.Roles => access.Can(Permission.ManageUsers),
+        CatalogSection.AuditLog => false,
         _ => false
     };
     public string Search { get => search; set { search = value; Changed(); Filter(); } }

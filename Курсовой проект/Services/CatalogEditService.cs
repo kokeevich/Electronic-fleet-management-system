@@ -25,6 +25,7 @@ public sealed class CatalogEditService : ICatalogEditService
     }
     public async Task<CatalogEditData> LoadAsync(CatalogSection section, int id)
     {
+        if (section == CatalogSection.AuditLog) throw new UnauthorizedAccessException("Историю нельзя изменять.");
         access.Require(CatalogEditRules.PermissionFor(section));
         var actor = session.Current;
         await using var db = createContext();
@@ -54,6 +55,7 @@ public sealed class CatalogEditService : ICatalogEditService
 
     public async Task<CatalogEditResult> SaveAsync(CatalogEditData original, IReadOnlyDictionary<string, string> values)
     {
+        if (original.Section == CatalogSection.AuditLog) throw new UnauthorizedAccessException("Историю нельзя изменять.");
         access.Require(CatalogEditRules.PermissionFor(original.Section));
         var actor = session.Current;
         await using var db = createContext();
@@ -68,6 +70,7 @@ public sealed class CatalogEditService : ICatalogEditService
         var current = Snapshot(entity, specs);
         if (!creating && current.Any(x => !original.Original.TryGetValue(x.Key, out var old) || old != x.Value))
             return new(false, "Запись изменена другим пользователем. Закройте карточку, обновите список и откройте её заново.");
+        var beforeJson = creating ? null : AuditSnapshot.Json(entity, original.Section);
         foreach (var spec in specs)
         {
             var raw = values.GetValueOrDefault(spec.Key)?.Trim() ?? "";
@@ -121,6 +124,10 @@ public sealed class CatalogEditService : ICatalogEditService
         {
             if (creating) db.Add(entity);
             await db.SaveChangesAsync();
+            var entityId = GetId(entity, original.Section);
+            db.AuditLogs.Add(AuditSnapshot.Create(actor!, creating ? "Создание" : "Изменение",
+                AuditSnapshot.EntityName(original.Section), entityId, beforeJson, AuditSnapshot.Json(entity, original.Section)));
+            await db.SaveChangesAsync();
             await transaction.CommitAsync();
             return new(true, "Изменения сохранены.");
         }
@@ -146,6 +153,7 @@ public sealed class CatalogEditService : ICatalogEditService
 
     public async Task<CatalogEditResult> DeleteAsync(CatalogEditData original)
     {
+        if (original.Section == CatalogSection.AuditLog) throw new UnauthorizedAccessException("Историю нельзя изменять.");
         access.Require(CatalogEditRules.PermissionFor(original.Section));
         if (original.Section == CatalogSection.Roles) return new(false, "Системные роли нельзя удалять.");
         var actor = session.Current;
@@ -175,9 +183,13 @@ public sealed class CatalogEditService : ICatalogEditService
                 return new(false, "В системе должен остаться администратор.");
         }
         if (!ReferenceEquals(actor, session.Current)) throw new UnauthorizedAccessException();
+        var beforeJson = AuditSnapshot.Json(entity, original.Section);
         db.Remove(entity);
         try
         {
+            await db.SaveChangesAsync();
+            db.AuditLogs.Add(AuditSnapshot.Create(actor!, "Удаление", AuditSnapshot.EntityName(original.Section),
+                original.Id, beforeJson, null));
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
             return new(true, "Запись удалена.");
@@ -186,6 +198,14 @@ public sealed class CatalogEditService : ICatalogEditService
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 547 })
         { return new(false, "Удаление невозможно: запись используется в других данных."); }
     }
+
+    private static int GetId(object entity, CatalogSection section) => section switch
+    {
+        CatalogSection.Drivers => ((Driver)entity).DriverId, CatalogSection.Assignments => ((VehicleAssignment)entity).AssignmentId,
+        CatalogSection.Documents => ((Document)entity).DocumentId, CatalogSection.Maintenance => ((MaintenanceRepair)entity).WorkId,
+        CatalogSection.Parts => ((Part)entity).PartId, CatalogSection.WorkParts => ((WorkPart)entity).CompositionId,
+        CatalogSection.Users => ((User)entity).UserId, _ => throw new UnauthorizedAccessException()
+    };
 
     private async Task<string?> ValidateAsync(OzvsKursachContext db, object entity)
     {
