@@ -17,6 +17,16 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <DockPanel Margin="0,0,0,8">
+            <Button x:Name="NotificationsButton" DockPanel.Dock="Right" Click="Notifications_Click"
+                    ToolTip="Уведомления" AutomationProperties.Name="Уведомления" Margin="8,0" Padding="8" VerticalAlignment="Center">
+                <Grid Width="42" Height="30">
+                    <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="25" VerticalAlignment="Center"/>
+                    <Border x:Name="NotificationBadge" Background="#B42318" CornerRadius="10" MinWidth="20" Height="20"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
+                        <TextBlock x:Name="NotificationCount" Foreground="White" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="3,0"/>
+                    </Border>
+                </Grid>
+            </Button>
             <Button x:Name="ReportsButton" DockPanel.Dock="Right" Content="Отчёты" Click="Reports_Click" Margin="8,0" VerticalAlignment="Center"/>
             <Button DockPanel.Dock="Right" Content="Выйти" Click="Logout_Click"
                     IsEnabled="{Binding Fleet.IsIdle}" Margin="12,0,0,0" VerticalAlignment="Center"/>

@@ -14,6 +14,7 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         var collection = new ServiceCollection();
         collection.AddSingleton<UserSession>();
+        collection.AddSingleton<NotificationService>();
         collection.AddSingleton<MaintenanceReportService>();
         collection.AddSingleton<FleetReportService>();
         collection.AddSingleton<VehicleHistoryService>();

@@ -59,6 +59,69 @@ public class CatalogEditTests : IDisposable
     }
 
     [Fact]
+    public async Task NotificationsRespectRolesReadStateAndResolvedEvents()
+    {
+        await using var db = new OzvsKursachContext(options);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var document = await db.Documents.FindAsync(30);
+        document!.IssueDate = today.AddDays(-100); document.ExpiryDate = today.AddDays(5);
+        var driver = await db.Drivers.FindAsync(10);
+        driver!.LicenseExpiryDate = today.AddDays(10);
+        var work = await db.MaintenanceRepairs.FindAsync(40);
+        work!.WorkDate = today.AddDays(-10); work.NextMaintenanceDate = today.AddDays(20);
+        work.NextMaintenanceMileage = 1500;
+        await db.SaveChangesAsync();
+        var service = new NotificationService(access, session, () => new OzvsKursachContext(options));
+        var all = await service.LoadAsync();
+        Assert.Equal(4, all.Count);
+        var insurance = all.Single(x => x.Category == "Страхование");
+        await service.MarkReadAsync(insurance.Key);
+        await service.MarkReadAsync(insurance.Key);
+        Assert.Single(await db.Set<NotificationRead>().ToListAsync());
+        Assert.True((await service.LoadAsync()).Single(x => x.Key == insurance.Key).IsRead);
+        session.SignIn(new SessionUser(2, "Диспетчер", "Диспетчер"));
+        var dispatcher = await service.LoadAsync();
+        Assert.Equal(2, dispatcher.Count);
+        Assert.All(dispatcher, x => Assert.False(x.IsRead));
+        session.SignIn(new SessionUser(3, "Механик", "Механик"));
+        Assert.All(await service.LoadAsync(), x => Assert.Equal("ТО", x.Category));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.MarkReadAsync(insurance.Key));
+        session.SignIn(new SessionUser(4, "Наблюдатель", "Наблюдатель"));
+        Assert.Equal(4, (await service.LoadAsync()).Count);
+        document.ExpiryDate = today.AddYears(1);
+        await db.SaveChangesAsync();
+        Assert.DoesNotContain(await service.LoadAsync(), x => x.Category == "Страхование");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.MarkReadAsync(insurance.Key));
+        var actor = await db.Users.FindAsync(4); actor!.RoleId = 3; await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync());
+    }
+
+    [Fact]
+    public void NotificationRulesSuppressReplacedPoliciesAndUseLatestWorkPlan()
+    {
+        var today = new DateOnly(2026, 10, 26);
+        var car = new Vehicle { VehicleId = 10, LicensePlate = "TEST", Mileage = 10000 };
+        var docs = new[] {
+            new Document { DocumentId = 1, VehicleId = 10, Vehicle = car, DocumentType = "ОСАГО", IssueDate = today.AddYears(-1), ExpiryDate = today.AddDays(-1) },
+            new Document { DocumentId = 2, VehicleId = 10, Vehicle = car, DocumentType = "ОСАГО", IssueDate = today, ExpiryDate = today.AddYears(1) }
+        };
+        var works = new[] {
+            new MaintenanceRepair { WorkId = 1, VehicleId = 10, Vehicle = car, WorkDate = today.AddDays(-20), NextMaintenanceDate = today.AddDays(-1) },
+            new MaintenanceRepair { WorkId = 2, VehicleId = 10, Vehicle = car, WorkDate = today, NextMaintenanceDate = today.AddDays(30), NextMaintenanceMileage = 11000 }
+        };
+        var rows = NotificationService.Build(today, docs, [], works);
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, x => Assert.False(x.Overdue));
+        var overdue = NotificationService.Build(today.AddDays(31), docs, [], works);
+        Assert.Contains(overdue, x => x.Overdue);
+        Assert.NotEqual(rows.Single(x => x.Key.StartsWith("maintenance-date")).Key,
+            overdue.Single(x => x.Key.StartsWith("maintenance-date")).Key);
+        works[1].NextMaintenanceDate = today.AddDays(31);
+        works[1].NextMaintenanceMileage = 11001;
+        Assert.Empty(NotificationService.Build(today, docs, [], works));
+    }
+
+    [Fact]
     public async Task VehicleHistoryContainsOnlySelectedCarAndRejectsRevokedSession()
     {
         await using var db = new OzvsKursachContext(options);

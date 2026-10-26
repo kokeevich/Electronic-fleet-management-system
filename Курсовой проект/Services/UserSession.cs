@@ -41,7 +41,7 @@ public sealed class AccessService(UserSession session)
                 or Permission.ViewParts or Permission.ManageParts or Permission.ViewNotifications
                 or Permission.MaintenanceReports or Permission.ViewAuditLog,
             "Наблюдатель" => permission is Permission.ViewVehicles or Permission.ViewDrivers
-                or Permission.ViewDocuments or Permission.ViewMaintenance or Permission.ViewParts or Permission.ViewAuditLog,
+                or Permission.ViewDocuments or Permission.ViewMaintenance or Permission.ViewParts or Permission.ViewAuditLog or Permission.ViewNotifications,
             _ => false
         };
     }

@@ -45,6 +45,12 @@ public partial class OzvsKursachContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<NotificationRead>(entity =>
+        {
+            entity.ToTable("NotificationReads");
+            entity.HasKey(x => new { x.UserId, x.EventKey });
+            entity.Property(x => x.EventKey).HasMaxLength(200);
+        });
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.ToTable("AuditLog");

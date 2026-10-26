@@ -6,21 +6,75 @@ namespace Курсовой_проект;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel;
+    private readonly Курсовой_проект.Services.NotificationService notifications;
+    private readonly System.Windows.Threading.DispatcherTimer notificationTimer = new() { Interval = TimeSpan.FromMinutes(5) };
+    private bool checkingNotifications;
+    private bool notificationRefreshPending;
+    private bool closed;
     private readonly Курсовой_проект.Services.VehicleHistoryService history;
     private readonly Курсовой_проект.Services.FleetReportService fleetReports;
     private readonly Курсовой_проект.Services.MaintenanceReportService reports;
     public event EventHandler? LogoutRequested;
-    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog, Курсовой_проект.Services.MaintenanceReportService reports, Курсовой_проект.Services.FleetReportService fleetReports, Курсовой_проект.Services.VehicleHistoryService history)
+    public MainWindow(MainViewModel viewModel, CatalogViewModel catalog, Курсовой_проект.Services.MaintenanceReportService reports, Курсовой_проект.Services.FleetReportService fleetReports, Курсовой_проект.Services.VehicleHistoryService history, Курсовой_проект.Services.NotificationService notifications)
     {
         InitializeComponent();
         this.viewModel = viewModel;
         this.history = history;
+        this.notifications = notifications;
+        notificationTimer.Tick += async (_, _) => await RefreshNotifications();
+        Курсовой_проект.Services.NotificationService.DataChanged += NotificationDataChanged;
+        Closed += (_, _) =>
+        {
+            closed = true;
+            notificationTimer.Stop();
+            Курсовой_проект.Services.NotificationService.DataChanged -= NotificationDataChanged;
+        };
         this.reports = reports;
         this.fleetReports = fleetReports;
         ReportsButton.Visibility = reports.CanRead ? Visibility.Visible : Visibility.Collapsed;
         DataContext = new WorkspaceViewModel(viewModel, catalog);
         Loaded += WindowLoaded;
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
+    }
+
+    private void NotificationDataChanged() => Dispatcher.BeginInvoke(new Action(async () => await RefreshNotifications()));
+    private async Task RefreshNotifications()
+    {
+        if (closed) return;
+        if (checkingNotifications) { notificationRefreshPending = true; return; }
+        checkingNotifications = true;
+        try
+        {
+            var rows = await notifications.LoadAsync();
+            if (closed) return;
+            var count = rows.Count(x => !x.IsRead);
+            NotificationCount.Text = count > 99 ? "99+" : count.ToString();
+            NotificationBadge.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            NotificationsButton.ToolTip = $"Уведомления: новых {count}";
+        }
+        catch
+        {
+            if (!closed)
+            {
+                NotificationBadge.Visibility = Visibility.Visible;
+                NotificationCount.Text = "!";
+                NotificationsButton.ToolTip = "Не удалось проверить уведомления. Откройте список для повторной проверки.";
+            }
+        }
+        finally
+        {
+            checkingNotifications = false;
+            if (notificationRefreshPending && !closed)
+            {
+                notificationRefreshPending = false;
+                await RefreshNotifications();
+            }
+        }
+    }
+    private async void Notifications_Click(object sender, RoutedEventArgs e)
+    {
+        new Views.NotificationsWindow(notifications, history) { Owner = this }.ShowDialog();
+        await RefreshNotifications();
     }
 
     private void VehicleHistory_Click(object sender, RoutedEventArgs e)
@@ -32,6 +86,9 @@ public partial class MainWindow : Window
     private void Reports_Click(object sender, RoutedEventArgs e)
     {
         var menu = new System.Windows.Controls.ContextMenu();
+        var deadlines = new System.Windows.Controls.MenuItem { Header = "Предстоящие и просроченные события" };
+        deadlines.Click += Notifications_Click;
+        menu.Items.Add(deadlines);
         if (fleetReports.CanRead)
         {
             var fleet = new System.Windows.Controls.MenuItem { Header = "Состояние автопарка" };
@@ -52,6 +109,8 @@ public partial class MainWindow : Window
     {
         Loaded -= WindowLoaded;
         await viewModel.LoadAsync();
+        await RefreshNotifications();
+        if (!closed) notificationTimer.Start();
     }
 
     private void Logout_Click(object sender, RoutedEventArgs e) =>

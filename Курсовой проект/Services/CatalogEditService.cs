@@ -38,6 +38,7 @@ public sealed class CatalogEditService : ICatalogEditService, IPasswordResetServ
             })));
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
+            NotificationService.NotifyDataChanged();
         return new(true, "Новый пароль сохранён.");
     }
 
@@ -153,6 +154,7 @@ public sealed class CatalogEditService : ICatalogEditService, IPasswordResetServ
                 AuditSnapshot.EntityName(original.Section), entityId, beforeJson, AuditSnapshot.Json(entity, original.Section)));
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
+            NotificationService.NotifyDataChanged();
             return new(true, "Изменения сохранены.");
         }
         catch (DbUpdateConcurrencyException) { return new(false, "Запись изменена. Обновите список."); }
@@ -216,6 +218,7 @@ public sealed class CatalogEditService : ICatalogEditService, IPasswordResetServ
                 original.Id, beforeJson, null));
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
+            NotificationService.NotifyDataChanged();
             return new(true, "Запись удалена.");
         }
         catch (DbUpdateConcurrencyException) { return new(false, "Запись изменена. Обновите список."); }

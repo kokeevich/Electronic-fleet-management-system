@@ -63,6 +63,7 @@ public sealed class VehicleStore : IVehicleStore
                 await database.SaveChangesAsync();
             }
             await transaction.CommitAsync();
+            NotificationService.NotifyDataChanged();
             return new(true, original == null ? "Автомобиль добавлен." : "Изменения сохранены.");
         }
         catch (DbUpdateConcurrencyException) { return Conflict(); }
@@ -101,6 +102,7 @@ public sealed class VehicleStore : IVehicleStore
                 await database.SaveChangesAsync();
             }
             await transaction.CommitAsync();
+            NotificationService.NotifyDataChanged();
             return new(true, "Автомобиль удалён.");
         }
         catch (DbUpdateConcurrencyException) { return Conflict(); }
