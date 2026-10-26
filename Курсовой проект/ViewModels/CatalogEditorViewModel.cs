@@ -5,7 +5,7 @@ using Курсовой_проект.Services;
 
 namespace Курсовой_проект.ViewModels;
 
-public sealed class CatalogEditorViewModel(ICatalogEditService service, CatalogSection section, int id) : INotifyPropertyChanged
+public sealed class CatalogEditorViewModel(ICatalogEditService service, CatalogSection section, int id, bool resetPassword = false) : INotifyPropertyChanged
 {
     private CatalogEditData? original;
     private bool busy;
@@ -31,6 +31,14 @@ public sealed class CatalogEditorViewModel(ICatalogEditService service, CatalogS
         {
             original = await service.LoadAsync(section, id);
             Title = original.Title;
+            if (resetPassword)
+            {
+                Title = "Сброс пароля · " + original.Original.GetValueOrDefault("Login");
+                Fields.Add(new EditField(new("Password", "Новый пароль (8–128 символов)", MaxLength:128), "", []));
+                Fields.Add(new EditField(new("PasswordConfirmation", "Повторите пароль", MaxLength:128), "", []));
+                Message = "После сохранения сообщите пользователю новый пароль. Уже открытые сеансы останутся активными.";
+                return;
+            }
             foreach (var field in original.Fields) Fields.Add(field);
             Message = section == CatalogSection.Roles ? "Название роли закреплено правами доступа. Можно изменить описание."
                 : section == CatalogSection.Users && id != 0 ? "Пароль не изменяется. Изменённая роль применяется при следующем входе."
@@ -47,7 +55,10 @@ public sealed class CatalogEditorViewModel(ICatalogEditService service, CatalogS
         IsBusy = true;
         try
         {
-            var result = await service.SaveAsync(original!, Fields.ToDictionary(x => x.Key, x => x.Value));
+            var result = resetPassword
+                ? await ((IPasswordResetService)service).ResetPasswordAsync(id,
+                    Fields.Single(x => x.Key == "Password").Value, Fields.Single(x => x.Key == "PasswordConfirmation").Value)
+                : await service.SaveAsync(original!, Fields.ToDictionary(x => x.Key, x => x.Value));
             Message = result.Message;
             return result.Success;
         }

@@ -6,7 +6,7 @@ using Курсовой_проект.Models;
 
 namespace Курсовой_проект.Services;
 
-public sealed class CatalogEditService : ICatalogEditService
+public sealed class CatalogEditService : ICatalogEditService, IPasswordResetService
 {
     private readonly AccessService access;
     private readonly UserSession session;
@@ -17,6 +17,30 @@ public sealed class CatalogEditService : ICatalogEditService
     {
         this.access = access; this.session = session; this.createContext = createContext;
     }
+    public async Task<CatalogEditResult> ResetPasswordAsync(int userId, string password, string confirmation)
+    {
+        access.Require(Permission.ManageUsers);
+        var actor = session.Current!;
+        if (password.Length < 8 || password.Length > 128 || string.IsNullOrWhiteSpace(password))
+            return new(false, "Пароль должен содержать от 8 до 128 символов.");
+        if (password != confirmation) return new(false, "Пароли не совпадают.");
+        await using var db = createContext();
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        await CheckActorAsync(db, CatalogSection.Users);
+        var user = await db.Users.FindAsync(userId);
+        if (user == null) return new(false, "Пользователь удалён. Обновите список.");
+        user.Password = PasswordHasher.Hash(password);
+        if (!ReferenceEquals(actor, session.Current)) throw new UnauthorizedAccessException();
+        db.AuditLogs.Add(AuditSnapshot.Create(actor, "Изменение", "Пользователи", userId,
+            null, System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["Действие"] = "Пароль сброшен администратором", ["Логин"] = user.Login
+            })));
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return new(true, "Новый пароль сохранён.");
+    }
+
     private async Task CheckActorAsync(OzvsKursachContext db, CatalogSection section)
     {
         access.Require(CatalogEditRules.PermissionFor(section));

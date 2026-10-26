@@ -74,3 +74,9 @@ public static class CatalogEditRules
         _ => throw new UnauthorizedAccessException()
     };
 }
+
+
+public interface IPasswordResetService
+{
+    Task<CatalogEditResult> ResetPasswordAsync(int userId, string password, string confirmation);
+}

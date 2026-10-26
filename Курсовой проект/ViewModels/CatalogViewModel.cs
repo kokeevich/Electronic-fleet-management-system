@@ -37,10 +37,13 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             if (selected == value) return;
             selected = value;
             search = "";
-            Changed(); Changed(nameof(Title)); Changed(nameof(IsAuditLog)); Changed(nameof(Search)); Changed(nameof(CanManageSection)); Changed(nameof(CanCreateRecord)); Changed(nameof(CanDeleteRecord)); Changed(nameof(CanCreateDelete));
+            Changed(); Changed(nameof(Title)); Changed(nameof(IsAuditLog)); Changed(nameof(ShowResetPassword)); Changed(nameof(Search)); Changed(nameof(CanManageSection)); Changed(nameof(CanCreateRecord)); Changed(nameof(CanDeleteRecord)); Changed(nameof(CanCreateDelete));
             _ = LoadAsync();
         }
     }
+    public bool ShowResetPassword => SelectedSection?.Section == CatalogSection.Users && access.Can(Permission.ManageUsers);
+    public CatalogEditorViewModel? CreatePasswordResetEditor() => ShowResetPassword && CanEditRecord && editor is IPasswordResetService
+        ? new CatalogEditorViewModel(editor, CatalogSection.Users, SelectedRow!.Id, true) : null;
     public bool IsAuditLog => SelectedSection?.Section == CatalogSection.AuditLog;
     public string Title => SelectedSection?.Title ?? "Реестры";
     public CatalogRow? SelectedRow

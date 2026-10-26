@@ -17,6 +17,14 @@ public partial class CatalogView : UserControl
             await vm.LoadAsync();
     }
 
+    private async void ResetPassword_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not CatalogViewModel catalog) return;
+        var editor = catalog.CreatePasswordResetEditor();
+        if (editor != null && new CatalogEditWindow(editor) { Owner = Window.GetWindow(this) }.ShowDialog() == true)
+            await catalog.LoadAsync();
+    }
+
     private void OpenAudit_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is CatalogViewModel { IsAuditLog: true, CanOpenRecord: true, SelectedRow: { } row })

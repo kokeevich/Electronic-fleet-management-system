@@ -59,6 +59,28 @@ public class CatalogEditTests : IDisposable
     }
 
     [Fact]
+    public async Task PasswordResetRequiresAdministratorAndNeverLogsSecrets()
+    {
+        const string password = "NewPassword!2026";
+        Assert.False((await service.ResetPasswordAsync(5, password, "different")).Success);
+        Assert.True((await service.ResetPasswordAsync(5, password, password)).Success);
+        await using var db = new OzvsKursachContext(options);
+        var user = await db.Users.FindAsync(5);
+        Assert.True(PasswordHasher.Verify(password, user!.Password));
+        var log = Assert.Single(await db.AuditLogs.ToListAsync());
+        Assert.Null(log.BeforeData);
+        Assert.DoesNotContain(password, log.AfterData!);
+        Assert.DoesNotContain(user.Password, log.AfterData!);
+        session.SignIn(new SessionUser(2, "Диспетчер", "Диспетчер"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ResetPasswordAsync(5, password, password));
+        session.SignIn(new SessionUser(1, "Администратор", "Администратор"));
+        var admin = await db.Users.FindAsync(1);
+        admin!.RoleId = 4;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ResetPasswordAsync(5, password, password));
+    }
+
+    [Fact]
     public async Task CreateAndDeleteEveryMutableRegistryAndHashNewPassword()
     {
         foreach (var (section, id) in Records.Where(x => x.Section != CatalogSection.Roles))
