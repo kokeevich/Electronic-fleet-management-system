@@ -111,9 +111,7 @@ public sealed class CatalogService : ICatalogService
                 var query = db.AuditLogs.AsNoTracking();
                 if (user.Role != "Администратор") query = query.Where(x => x.ActorUserId == user.UserId);
                 rows = (await query.OrderByDescending(x => x.ChangedAt).Take(1000).ToListAsync())
-                    .Select(x => new CatalogRow($"{x.Action}: {x.EntityName} · #{x.EntityId}",
-                        $"{x.ActorName} · {x.ChangedAt:dd.MM.yyyy HH:mm:ss}",
-                        $"До: {x.BeforeData ?? "—"}\nПосле: {x.AfterData ?? "—"}", x.Action, x.AuditLogId)).ToList();
+                    .Select(AuditPresentation.Present).ToList();
                 break;
             default: throw new UnauthorizedAccessException();
         }

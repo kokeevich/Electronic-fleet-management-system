@@ -17,6 +17,19 @@ public partial class CatalogView : UserControl
             await vm.LoadAsync();
     }
 
+    private void OpenAudit_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is CatalogViewModel { IsAuditLog: true, CanOpenRecord: true, SelectedRow: { } row })
+            new RecordDetailsWindow(row) { Owner = Window.GetWindow(this), Title = "Подробности события" }.ShowDialog();
+    }
+
+    private void Audit_DoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is ListView list && e.OriginalSource is DependencyObject source &&
+            ItemsControl.ContainerFromElement(list, source) is ListViewItem)
+            OpenAudit_Click(sender, e);
+    }
+
     private async void AddRecord_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not CatalogViewModel catalog) return;

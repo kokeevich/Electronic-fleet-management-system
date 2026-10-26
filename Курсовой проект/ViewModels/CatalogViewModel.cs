@@ -37,10 +37,11 @@ public sealed class CatalogViewModel : INotifyPropertyChanged
             if (selected == value) return;
             selected = value;
             search = "";
-            Changed(); Changed(nameof(Title)); Changed(nameof(Search)); Changed(nameof(CanManageSection)); Changed(nameof(CanCreateRecord)); Changed(nameof(CanDeleteRecord)); Changed(nameof(CanCreateDelete));
+            Changed(); Changed(nameof(Title)); Changed(nameof(IsAuditLog)); Changed(nameof(Search)); Changed(nameof(CanManageSection)); Changed(nameof(CanCreateRecord)); Changed(nameof(CanDeleteRecord)); Changed(nameof(CanCreateDelete));
             _ = LoadAsync();
         }
     }
+    public bool IsAuditLog => SelectedSection?.Section == CatalogSection.AuditLog;
     public string Title => SelectedSection?.Title ?? "Реестры";
     public CatalogRow? SelectedRow
     {

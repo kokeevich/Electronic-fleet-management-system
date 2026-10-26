@@ -18,6 +18,8 @@
         <DockPanel Grid.Row="2" Margin="0,0,0,6">
             <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Foreground="#58736D" VerticalAlignment="Center" Margin="8,0,0,0"/>
             <WrapPanel>
+                <Button Content="Открыть" Click="OpenAudit_Click" IsEnabled="{Binding CanOpenRecord}" Margin="0,0,8,0"
+                        Visibility="{Binding IsAuditLog, Converter={StaticResource BoolVisibility}}"/>
                 <Button Content="Добавить" Click="AddRecord_Click" IsEnabled="{Binding CanCreateRecord}" Margin="0,0,8,0"
                         Visibility="{Binding CanCreateDelete, Converter={StaticResource BoolVisibility}}"/>
                 <Button Content="Удалить" Click="DeleteRecord_Click" IsEnabled="{Binding CanDeleteRecord}" Margin="0,0,8,0"
@@ -27,7 +29,7 @@
                         Visibility="{Binding CanManageSection, Converter={StaticResource BoolVisibility}}"/>
             </WrapPanel>
         </DockPanel>
-        <ListView Grid.Row="3" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}"
+        <ListView MouseDoubleClick="Audit_DoubleClick" Grid.Row="3" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}"
                   ItemContainerStyle="{StaticResource FleetCardStyle}"
                   Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
