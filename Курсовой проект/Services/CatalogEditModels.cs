@@ -1,18 +1,43 @@
+using System.ComponentModel;
+using System.Globalization;
+
 namespace Курсовой_проект.Services;
 
 public sealed record EditOption(string Value, string Label);
 public sealed record EditSpec(string Key, string Label, bool Required = true, int MaxLength = 0, string? Choice = null);
-public sealed class EditField(EditSpec spec, string value, IReadOnlyList<EditOption> options)
+public sealed class EditField(EditSpec spec, string value, IReadOnlyList<EditOption> options) : INotifyPropertyChanged
 {
     public string Key => spec.Key;
-    public string Label => spec.Label + (spec.Required ? " *" : "");
+    public string Label => spec.Label.Replace(" (дд.мм.гггг)", "") + (spec.Required ? " *" : "");
     public bool IsReadOnly => spec.Key is "ActorUserId" or "ActorName" or "ChangedAt" or "Action" or "EntityName" or "EntityId" or "BeforeData" or "AfterData";
+    public bool IsDate => spec.Key is "LicenseIssueDate" or "LicenseExpiryDate" or "StartDate" or "EndDate"
+        or "IssueDate" or "ExpiryDate" or "WorkDate" or "NextMaintenanceDate";
+    public bool CanClearDate => IsDate && !spec.Required;
+    public string PasswordHint => PasswordRules.Hint;
+    public bool ShowPasswordHint => spec.Key == "Password";
+    public DateTime? SelectedDate
+    {
+        get => DateTime.TryParseExact(Value, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : null;
+        set => Value = value?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? "";
+    }
     public bool IsPassword => spec.Key is "Password" or "PasswordConfirmation";
     public bool IsChoice => spec.Choice != null;
     public bool IsMultiline => spec.Key == "Description";
     public int MaxLength => spec.MaxLength > 0 ? spec.MaxLength : 100;
     public IReadOnlyList<EditOption> Options { get; } = options;
-    public string Value { get; set; } = value;
+    private string fieldValue = value;
+    public string Value
+    {
+        get => fieldValue;
+        set
+        {
+            if (fieldValue == value) return;
+            fieldValue = value;
+            PropertyChanged?.Invoke(this, new(nameof(Value)));
+            PropertyChanged?.Invoke(this, new(nameof(SelectedDate)));
+        }
+    }
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 public sealed record CatalogEditData(CatalogSection Section, int Id, string Title,
     IReadOnlyList<EditField> Fields, IReadOnlyDictionary<string, string> Original);

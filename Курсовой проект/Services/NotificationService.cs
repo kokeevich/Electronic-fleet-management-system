@@ -15,6 +15,7 @@ public sealed class NotificationService
     private readonly AccessService access;
     private readonly UserSession session;
     private readonly Func<OzvsKursachContext> createContext;
+    public bool CanRead => access.Can(Permission.ViewNotifications);
     public static event Action? DataChanged;
     public static void NotifyDataChanged() => DataChanged?.Invoke();
     public NotificationService(AccessService access, UserSession session) : this(access, session, DatabaseFactory.Create) { }

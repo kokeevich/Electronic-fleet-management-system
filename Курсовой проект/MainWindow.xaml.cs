@@ -21,6 +21,7 @@ public partial class MainWindow : Window
         this.viewModel = viewModel;
         this.history = history;
         this.notifications = notifications;
+        NotificationsButton.Visibility = notifications.CanRead ? Visibility.Visible : Visibility.Collapsed;
         notificationTimer.Tick += async (_, _) => await RefreshNotifications();
         Курсовой_проект.Services.NotificationService.DataChanged += NotificationDataChanged;
         Closed += (_, _) =>
@@ -40,7 +41,7 @@ public partial class MainWindow : Window
     private void NotificationDataChanged() => Dispatcher.BeginInvoke(new Action(async () => await RefreshNotifications()));
     private async Task RefreshNotifications()
     {
-        if (closed) return;
+        if (closed || !notifications.CanRead) return;
         if (checkingNotifications) { notificationRefreshPending = true; return; }
         checkingNotifications = true;
         try
@@ -73,6 +74,7 @@ public partial class MainWindow : Window
     }
     private async void Notifications_Click(object sender, RoutedEventArgs e)
     {
+        if (!notifications.CanRead) return;
         new Views.NotificationsWindow(notifications, history) { Owner = this }.ShowDialog();
         await RefreshNotifications();
     }
@@ -88,7 +90,7 @@ public partial class MainWindow : Window
         var menu = new System.Windows.Controls.ContextMenu();
         var deadlines = new System.Windows.Controls.MenuItem { Header = "Предстоящие и просроченные события" };
         deadlines.Click += Notifications_Click;
-        menu.Items.Add(deadlines);
+        if (notifications.CanRead) menu.Items.Add(deadlines);
         if (fleetReports.CanRead)
         {
             var fleet = new System.Windows.Controls.MenuItem { Header = "Состояние автопарка" };
@@ -110,7 +112,7 @@ public partial class MainWindow : Window
         Loaded -= WindowLoaded;
         await viewModel.LoadAsync();
         await RefreshNotifications();
-        if (!closed) notificationTimer.Start();
+        if (!closed && notifications.CanRead) notificationTimer.Start();
     }
 
     private void Logout_Click(object sender, RoutedEventArgs e) =>

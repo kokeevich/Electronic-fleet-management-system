@@ -75,6 +75,8 @@ public class RegistrationTests
         yield return new object[] { ValidRequest() with { Password = new string('a', 129), PasswordConfirmation = new string('a', 129) } };
         yield return new object[] { ValidRequest() with { Password = "        ", PasswordConfirmation = "        " } };
         yield return new object[] { ValidRequest() with { PasswordConfirmation = Password + " " } };
+        foreach (var weak in new[] { "password123!", "PASSWORD123!", "Password123", "Password!!!", "Aa1!test\n" })
+            yield return new object[] { ValidRequest() with { Password = weak, PasswordConfirmation = weak } };
     }
 
     [Theory]
@@ -93,7 +95,7 @@ public class RegistrationTests
     [InlineData(128)]
     public async Task PasswordLengthBoundariesAreAccepted(int length)
     {
-        var password = new string('я', length);
+        var password = "Яя1!" + new string('я', length - 4);
         var store = new MemoryStore();
         var request = ValidRequest() with { Password = password, PasswordConfirmation = password };
         Assert.True((await new RegistrationService(store).RegisterAsync(request)).Success);

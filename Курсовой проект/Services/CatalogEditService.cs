@@ -21,8 +21,8 @@ public sealed class CatalogEditService : ICatalogEditService, IPasswordResetServ
     {
         access.Require(Permission.ManageUsers);
         var actor = session.Current!;
-        if (password.Length < 8 || password.Length > 128 || string.IsNullOrWhiteSpace(password))
-            return new(false, "Пароль должен содержать от 8 до 128 символов.");
+        var passwordError = PasswordRules.Validate(password);
+        if (passwordError != null) return new(false, passwordError);
         if (password != confirmation) return new(false, "Пароли не совпадают.");
         await using var db = createContext();
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -135,8 +135,8 @@ public sealed class CatalogEditService : ICatalogEditService, IPasswordResetServ
         if (creating && entity is User user)
         {
             var password = values.GetValueOrDefault("Password") ?? "";
-            if (password.Length < 8 || password.Length > 128 || string.IsNullOrWhiteSpace(password))
-                return new(false, "Пароль должен содержать от 8 до 128 символов.");
+            var passwordError = PasswordRules.Validate(password);
+            if (passwordError != null) return new(false, passwordError);
             if (password != values.GetValueOrDefault("PasswordConfirmation"))
                 return new(false, "Пароли не совпадают.");
             user.Password = PasswordHasher.Hash(password);

@@ -13,7 +13,17 @@ public partial class RegisterWindow : Window
         InitializeComponent();
         this.viewModel = viewModel;
         DataContext = viewModel;
-        Loaded += (_, _) => LastNameTextBox.Focus();
+        Loaded += (_, _) =>
+        {
+            var area = SystemParameters.WorkArea;
+            MinHeight = Math.Min(MinHeight, Math.Max(240, area.Height - 24));
+            MinWidth = Math.Min(MinWidth, Math.Max(280, area.Width - 24));
+            Height = Math.Min(Height, area.Height - 24);
+            Width = Math.Min(Width, area.Width - 24);
+            Top = Math.Max(area.Top, Math.Min(Top, area.Bottom - Height));
+            Left = Math.Max(area.Left, Math.Min(Left, area.Right - Width));
+            LastNameTextBox.Focus();
+        };
         // Не закрываем окно в момент сохранения: результат операции должен быть виден.
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
         Closed += (_, _) => { PasswordBox.Clear(); ConfirmationBox.Clear(); };

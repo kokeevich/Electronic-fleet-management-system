@@ -74,8 +74,8 @@ public sealed class RegistrationService(IRegistrationStore store) : IRegistratio
         if (login.Length is < 3 or > 100 ||
             login.Any(c => !char.IsLetterOrDigit(c) && c is not ('.' or '_' or '-')))
             return new(false, "Логин: от 3 до 100 символов. Используйте буквы, цифры, точку, дефис или подчёркивание.");
-        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length is < 8 or > 128)
-            return new(false, "Пароль должен содержать от 8 до 128 символов и не состоять только из пробелов.");
+        var passwordError = PasswordRules.Validate(request.Password);
+        if (passwordError != null) return new(false, passwordError);
         if (!string.Equals(request.Password, request.PasswordConfirmation, StringComparison.Ordinal))
             return new(false, "Пароли не совпадают.");
 

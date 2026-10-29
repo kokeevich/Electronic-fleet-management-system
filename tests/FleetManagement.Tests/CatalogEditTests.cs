@@ -59,6 +59,23 @@ public class CatalogEditTests : IDisposable
     }
 
     [Fact]
+    public async Task WeakPasswordsAreRejectedForAdminCreationAndResetWithoutWrites()
+    {
+        const string weak = "password123";
+        Assert.False((await service.ResetPasswordAsync(5, weak, weak)).Success);
+        var existing = await service.LoadAsync(CatalogSection.Users, 5);
+        var draft = await service.LoadAsync(CatalogSection.Users, 0);
+        var values = existing.Original.ToDictionary(x => x.Key, x => x.Value);
+        values["Login"] = "new_weak_user";
+        values["Password"] = values["PasswordConfirmation"] = weak;
+        Assert.False((await service.SaveAsync(draft, values)).Success);
+        await using var db = new OzvsKursachContext(options);
+        Assert.Equal("HASH-MUST-NOT-CHANGE", (await db.Users.FindAsync(5))!.Password);
+        Assert.False(await db.Users.AnyAsync(x => x.Login == "new_weak_user"));
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
     public async Task NotificationsRespectRolesReadStateAndResolvedEvents()
     {
         await using var db = new OzvsKursachContext(options);
@@ -87,12 +104,14 @@ public class CatalogEditTests : IDisposable
         Assert.All(await service.LoadAsync(), x => Assert.Equal("ТО", x.Category));
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.MarkReadAsync(insurance.Key));
         session.SignIn(new SessionUser(4, "Наблюдатель", "Наблюдатель"));
-        Assert.Equal(4, (await service.LoadAsync()).Count);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync());
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.MarkReadAsync(insurance.Key));
+        session.SignIn(new SessionUser(1, "Администратор", "Администратор"));
         document.ExpiryDate = today.AddYears(1);
         await db.SaveChangesAsync();
         Assert.DoesNotContain(await service.LoadAsync(), x => x.Category == "Страхование");
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.MarkReadAsync(insurance.Key));
-        var actor = await db.Users.FindAsync(4); actor!.RoleId = 3; await db.SaveChangesAsync();
+        var actor = await db.Users.FindAsync(1); actor!.RoleId = 3; await db.SaveChangesAsync();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoadAsync());
     }
 
