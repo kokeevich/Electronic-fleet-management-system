@@ -16,18 +16,27 @@
    .NET», .NET 8 SDK и SQL Server/SQL Server Express. Для управления БД используйте SSMS.
 2. Скачайте ветку main и распакуйте её в отдельную папку.
 3. Подготовьте базу по инструкции ниже.
-4. Создайте файл %LOCALAPPDATA%\FleetManagement\connection.txt со строкой подключения
-   в одну строку, например:
+4. В папке проекта «Курсовой проект» скопируйте connection.example.txt как
+   connection.txt и укажите свой SQL Server. При сборке и публикации файл
+   автоматически копируется рядом с приложением. Если запускаете готовую программу,
+   создайте connection.txt прямо рядом с её .exe. Пример для локального SQLEXPRESS:
 
    ~~~text
-   Server=localhost\SQLEXPRESS;Database=ozvs_kursach;Integrated Security=True;Encrypt=True;TrustServerCertificate=False;Connect Timeout=5;
+   Server=localhost\SQLEXPRESS;Database=ozvs_kursach;Integrated Security=True;Encrypt=True;TrustServerCertificate=True;Connect Timeout=5;
    ~~~
 
-   Укажите свой сервер. Для локального учебного SQL Server с самоподписанным
-   сертификатом можно использовать TrustServerCertificate=True. Для удалённого
-   сервера настройте доверенный сертификат. Переменная FLEET_CONNECTION_STRING
-   имеет приоритет над файлом; после её изменения перезапустите Visual Studio.
-   Строку с реквизитами доступа не добавляйте в Git.
+   localhost означает текущий компьютер, поэтому на разных ПК с одинаковым
+   экземпляром SQLEXPRESS строку менять не требуется. Для экземпляра без имени
+   используйте Server=localhost. База должна быть установлена на каждом таком ПК,
+   либо подключение должно указывать на общий доступный сервер.
+   Windows-аутентификация использует текущую учётную запись Windows; ей нужен доступ
+   к SQL Server. TrustServerCertificate=True предназначен для локальной учебной
+   установки; для удалённого сервера используйте доверенный сертификат и False.
+
+   Порядок поиска: FLEET_CONNECTION_STRING → connection.txt рядом с .exe →
+   прежний %LOCALAPPDATA%\FleetManagement\connection.txt. Пустой источник пропускается.
+   Каталог в LOCALAPPDATA больше не обязателен. Рабочий connection.txt исключён из Git.
+   Пример без паролей хранится в репозитории.
 5. Откройте «Курсовой проект.sln», восстановите NuGet-пакеты, пересоберите и запустите.
 
 Из PowerShell в корне проекта:
@@ -215,3 +224,21 @@ dotnet test tests/FleetManagement.Tests/FleetManagement.Tests.csproj
 Окно регистрации подстраивает начальный размер под рабочую область экрана,
 поля прокручиваются отдельно от кнопок. Проверяйте оформление на Windows
 при масштабе 100% и 150% и уменьшенной высоте окна.
+
+
+## Перенос программы между компьютерами
+
+Переносите всю папку собранной/опубликованной программы вместе с connection.txt,
+а не один .exe. Для запуска без установленного .NET Desktop Runtime можно создать
+публикацию с включённой средой выполнения (для 64-битной Windows):
+
+~~~powershell
+dotnet publish "Курсовой проект/Курсовой проект.csproj" -c Release -r win-x64 --self-contained true -o artifacts/fleet
+~~~
+
+Папку artifacts/fleet можно скопировать на флешку. SQL Server и база не включаются
+в публикацию: установите базу единым скриптом или используйте общий сервер.
+Если меняете настройки готовой программы, редактируйте файл рядом с её .exe;
+при последующей сборке файл из папки проекта может заменить его.
+Для PasswordMigration задайте ту же строку через переменную окружения или поместите
+connection.txt рядом с исполняемым файлом утилиты: у неё своя папка запуска.

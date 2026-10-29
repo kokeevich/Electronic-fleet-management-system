@@ -1,0 +1,1 @@
+Server=localhost\SQLEXPRESS;Database=ozvs_kursach;Integrated Security=True;Encrypt=True;TrustServerCertificate=True;Connect Timeout=5;

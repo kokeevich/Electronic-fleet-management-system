@@ -10,3 +10,6 @@ obj/
 *.nupkg
 project.lock.json
 artifacts/
+
+# Local database connection (may contain credentials)
+connection.txt
